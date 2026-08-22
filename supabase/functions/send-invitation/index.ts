@@ -86,11 +86,60 @@ Deno.serve(async (req: Request) => {
     const origin = appOrigin ?? "https://edubridge.app";
     const inviteLink = `${origin}/invite/${token}`;
 
+    // Send email via Brevo template
+    const brevoApiKey = Deno.env.get("BREVO_API_KEY") ?? "";
+    const brevoSenderEmail = Deno.env.get("BREVO_SENDER_EMAIL") ?? "";
+    const brevoSenderName = Deno.env.get("BREVO_SENDER_NAME") ?? "";
+    const schoolName = (metadata as Record<string, unknown>)?.school_name as string ?? "";
+
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    if (recipientEmail && brevoApiKey && brevoSenderEmail) {
+      try {
+        const templateId = role === "school_admin" ? 1 : null;
+
+        if (templateId !== null) {
+          const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "api-key": brevoApiKey,
+            },
+            body: JSON.stringify({
+              templateId,
+              sender: {
+                email: brevoSenderEmail,
+                name: brevoSenderName,
+              },
+              to: [{ email: recipientEmail, name: recipientName }],
+              params: {
+                schoolName,
+                adminName: recipientName,
+                invitationLink: inviteLink,
+              },
+            }),
+          });
+
+          if (brevoRes.ok) {
+            emailSent = true;
+          } else {
+            const brevoErr = await brevoRes.json().catch(() => ({}));
+            emailError = (brevoErr as Record<string, string>).message ?? `Brevo API returned ${brevoRes.status}`;
+          }
+        }
+      } catch (err) {
+        emailError = (err as Error).message;
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       invitationId,
       token,
       inviteLink,
+      emailSent,
+      emailError,
       message: "Invitation created successfully",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
