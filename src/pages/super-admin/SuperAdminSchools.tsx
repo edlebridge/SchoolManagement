@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Form';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Building2, Search, Ban, CircleCheck as CheckCircle2, Eye, Phone, Mail, MapPin, Users, GraduationCap, UserCog, Plus } from 'lucide-react';
+import { Building2, Search, Ban, CircleCheck as CheckCircle2, Eye, Phone, Mail, MapPin, Users, GraduationCap, UserCog, Plus, Send, Check } from 'lucide-react';
 import { formatDate, cn } from '@/lib/utils';
 import type { School } from '@/types';
 
@@ -33,6 +33,7 @@ interface AddSchoolForm {
   admin_phone: string;
   status: string;
   plan: string;
+  send_invite: boolean;
 }
 
 const EMPTY_FORM: AddSchoolForm = {
@@ -46,6 +47,7 @@ const EMPTY_FORM: AddSchoolForm = {
   admin_phone: '',
   status: 'pending',
   plan: 'starter',
+  send_invite: true,
 };
 
 export function SuperAdminSchools() {
@@ -62,6 +64,7 @@ export function SuperAdminSchools() {
   const [form, setForm] = useState<AddSchoolForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
+  const [successModal, setSuccessModal] = useState<{ schoolName: string; adminName: string; adminEmail: string; inviteLink: string | null; sendUrl: string | null; credentials: { email: string; password: string } } | null>(null);
 
   const loadSchools = useCallback(async () => {
     setLoading(true);
@@ -158,6 +161,7 @@ export function SuperAdminSchools() {
     if (!form.email.trim()) errs.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email format';
     if (!form.principal_name.trim()) errs.principal_name = 'Principal name is required';
+    if (form.send_invite && !form.admin_email.trim()) errs.admin_email = 'Admin email is required to send invitation';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -211,6 +215,82 @@ export function SuperAdminSchools() {
       plan: form.plan,
       status: form.status,
     });
+
+    // Create school admin account and send invitation if admin email provided
+    let inviteLink: string | null = null;
+    let sendUrl: string | null = null;
+    const adminEmail = form.admin_email.trim();
+    const adminName = form.admin_name.trim() || form.principal_name.trim();
+    const DEFAULT_PASSWORD = 'Password123!';
+
+    if (adminEmail) {
+      try {
+        // Create the school admin auth user + profile via edge function
+        const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/demo-create-user`;
+        const session = await supabase.auth.getSession();
+        const fnRes = await fetch(fnUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            email: adminEmail,
+            password: DEFAULT_PASSWORD,
+            fullName: adminName,
+            phone: form.admin_phone || null,
+            schoolId,
+            role: 'school_admin',
+          }),
+        });
+
+        if (!fnRes.ok) {
+          const err = await fnRes.json().catch(() => ({ error: 'Failed to create admin account' }));
+          toast(`School created, but admin account failed: ${err.error}`, 'error');
+        } else {
+          // Send invitation link
+          if (form.send_invite) {
+            const invUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invitation`;
+            const invRes = await fetch(invUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session?.access_token}`,
+              },
+              body: JSON.stringify({
+                schoolId,
+                recipientName: adminName,
+                recipientEmail: adminEmail,
+                recipientPhone: form.admin_phone || null,
+                role: 'school_admin',
+                channel: 'email',
+                appOrigin: window.location.origin,
+                metadata: { school_name: form.name },
+              }),
+            });
+
+            if (invRes.ok) {
+              const invData = await invRes.json();
+              inviteLink = invData.inviteLink as string;
+              const subject = `You're invited to manage ${form.name} on EduBridge`;
+              const bodyText = `Hi ${adminName},\n\nYou've been set up as the School Admin for ${form.name} on EduBridge.\n\nYour login credentials:\nEmail: ${adminEmail}\nPassword: ${DEFAULT_PASSWORD}\n\nOr click the link below to activate your account:\n${inviteLink}\n\nThis invitation expires in 7 days.`;
+              sendUrl = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+            }
+          }
+
+          setSuccessModal({
+            schoolName: form.name,
+            adminName,
+            adminEmail,
+            inviteLink,
+            sendUrl,
+            credentials: { email: adminEmail, password: DEFAULT_PASSWORD },
+          });
+        }
+      } catch {
+        toast('School created, but invitation sending failed', 'error');
+      }
+    }
 
     toast(`${form.name} created successfully`, 'success');
     setForm(EMPTY_FORM);
@@ -441,7 +521,74 @@ export function SuperAdminSchools() {
               <option value="suspended">Suspended</option>
             </Select>
           </div>
+
+          {form.admin_email.trim() && (
+            <div className="rounded-xl border border-surface-border p-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-ink dark:text-slate-100">
+                <input type="checkbox" checked={form.send_invite} onChange={(e) => setForm({ ...form, send_invite: e.target.checked })} className="rounded" />
+                <Send className="h-4 w-4 text-primary-600" />
+                Send invitation link to school admin
+              </label>
+              <p className="text-xs text-ink-muted ml-6">
+                An invitation email with a login link and credentials will be generated for {form.admin_email}.
+              </p>
+            </div>
+          )}
         </div>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        open={!!successModal}
+        onClose={() => setSuccessModal(null)}
+        title="School Created Successfully"
+        size="sm"
+        footer={<Button onClick={() => setSuccessModal(null)}>Done</Button>}
+      >
+        {successModal && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-success-soft">
+              <Check className="h-8 w-8 text-success-soft-text" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-ink dark:text-slate-100">
+                <strong>{successModal.schoolName}</strong> has been created and <strong>{successModal.adminName}</strong> has been set up as the School Admin.
+              </p>
+            </div>
+
+            {successModal.sendUrl && successModal.inviteLink ? (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-primary-50 dark:bg-primary-500/10 p-3 space-y-2">
+                  <p className="text-sm text-primary-600 dark:text-primary-light">
+                    Invitation link created for email.
+                  </p>
+                  <div className="rounded bg-white dark:bg-slate-800 p-2">
+                    <p className="text-xs text-ink-muted break-all font-mono">{successModal.inviteLink}</p>
+                  </div>
+                </div>
+                <a href={successModal.sendUrl} className="btn btn-primary w-full justify-center text-sm">
+                  <Send className="h-4 w-4" />
+                  Open Email App to Send
+                </a>
+                <p className="text-xs text-ink-muted text-center">
+                  This opens your email app with the invitation pre-written. Just hit send.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3 space-y-2">
+                <p className="text-sm text-amber-700 dark:text-amber-400 text-center">Share these credentials with the school admin:</p>
+                <div className="rounded bg-white dark:bg-slate-800 p-2">
+                  <p className="text-xs text-ink-muted">Email</p>
+                  <p className="font-mono text-sm text-ink dark:text-slate-100">{successModal.credentials.email}</p>
+                </div>
+                <div className="rounded bg-white dark:bg-slate-800 p-2">
+                  <p className="text-xs text-ink-muted">Password</p>
+                  <p className="font-mono text-sm text-ink dark:text-slate-100">{successModal.credentials.password}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
 
       {/* School Detail Modal */}

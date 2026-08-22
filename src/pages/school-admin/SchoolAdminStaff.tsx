@@ -1,5 +1,5 @@
 import { useState, useMemo, type FormEvent } from 'react';
-import { UserCog, Plus, Pencil, Trash2, Upload, Search, Mail, Phone, Building2 } from 'lucide-react';
+import { UserCog, Plus, Pencil, Trash2, Upload, Search, Mail, Phone, Building2, Send, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -38,6 +38,7 @@ interface TeacherFormState {
   emergency_contact_phone: string;
   subject_ids: string[];
   class_ids: string[];
+  send_invite: boolean;
 }
 
 const emptyForm: TeacherFormState = {
@@ -58,6 +59,7 @@ const emptyForm: TeacherFormState = {
   emergency_contact_phone: '',
   subject_ids: [],
   class_ids: [],
+  send_invite: true,
 };
 
 export function SchoolAdminStaff() {
@@ -76,7 +78,7 @@ export function SchoolAdminStaff() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [credentialsModal, setCredentialsModal] = useState<{ email: string; password: string } | null>(null);
+  const [credentialsModal, setCredentialsModal] = useState<{ email: string; password: string; inviteLink: string | null; sendUrl: string | null } | null>(null);
 
   const subjectMap = useMemo(() => {
     const map: Record<string, Subject> = {};
@@ -103,7 +105,7 @@ export function SchoolAdminStaff() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm });
     setAvatarFile(null);
     setAvatarPreview(null);
     setIdCardFile(null);
@@ -134,6 +136,7 @@ export function SchoolAdminStaff() {
       emergency_contact_phone: t.emergency_contact_phone ?? '',
       subject_ids: tSubjectIds,
       class_ids: tClassIds,
+      send_invite: false,
     });
     setAvatarFile(null);
     setAvatarPreview(t.avatar_url);
@@ -342,7 +345,46 @@ export function SchoolAdminStaff() {
       }
 
       toast('Teacher added successfully');
-      setCredentialsModal({ email: form.email.trim(), password: DEFAULT_PASSWORD });
+
+      // Send invitation link if requested
+      let inviteLink: string | null = null;
+      let sendUrl: string | null = null;
+
+      if (form.send_invite && form.email.trim()) {
+        try {
+          const session = await supabase.auth.getSession();
+          const invUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invitation`;
+          const invRes = await fetch(invUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.data.session?.access_token}`,
+            },
+            body: JSON.stringify({
+              schoolId: SCHOOL_ID,
+              recipientName: form.full_name.trim(),
+              recipientEmail: form.email.trim(),
+              recipientPhone: form.phone || null,
+              role: 'teacher',
+              channel: 'email',
+              appOrigin: window.location.origin,
+              metadata: { department: form.department },
+            }),
+          });
+
+          if (invRes.ok) {
+            const invData = await invRes.json();
+            inviteLink = invData.inviteLink as string;
+            const subject = `You're invited to join EduBridge as a Teacher`;
+            const bodyText = `Hi ${form.full_name.trim()},\n\nYou've been added as a teacher on EduBridge.\n\nYour login credentials:\nEmail: ${form.email.trim()}\nPassword: ${DEFAULT_PASSWORD}\n\nOr click the link below to activate your account:\n${inviteLink}\n\nThis invitation expires in 7 days.`;
+            sendUrl = `mailto:${form.email.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+          }
+        } catch {
+          toast('Invitation link creation failed, but account was created', 'error');
+        }
+      }
+
+      setCredentialsModal({ email: form.email.trim(), password: DEFAULT_PASSWORD, inviteLink, sendUrl });
     }
 
     setSaving(false);
@@ -591,11 +633,24 @@ export function SchoolAdminStaff() {
           </div>
 
           {!editing && (
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
-              <p className="text-sm text-amber-700 dark:text-amber-400">
-                A default password of <code className="font-mono font-bold">{DEFAULT_PASSWORD}</code> will be assigned. The teacher should change it after first login.
-              </p>
-            </div>
+            <>
+              <div className="rounded-xl border border-surface-border p-4 space-y-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-ink dark:text-slate-100">
+                  <input type="checkbox" checked={form.send_invite} onChange={(e) => setForm({ ...form, send_invite: e.target.checked })} className="rounded" />
+                  <Send className="h-4 w-4 text-primary-600" />
+                  Send invitation link to teacher
+                </label>
+                <p className="text-xs text-ink-muted ml-6">
+                  An invitation email with a login link and credentials will be generated for {form.email || 'the email above'}.
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  A default password of <code className="font-mono font-bold">{DEFAULT_PASSWORD}</code> will be assigned. The teacher should change it after first login.
+                </p>
+              </div>
+            </>
           )}
         </form>
       </Modal>
@@ -628,14 +683,39 @@ export function SchoolAdminStaff() {
       >
         {credentialsModal && (
           <div className="space-y-3">
-            <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
-              <p className="text-xs text-ink-muted mb-1">Email</p>
-              <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.email}</p>
-            </div>
-            <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
-              <p className="text-xs text-ink-muted mb-1">Password</p>
-              <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.password}</p>
-            </div>
+            {credentialsModal.sendUrl && credentialsModal.inviteLink ? (
+              <>
+                <div className="flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-success-soft">
+                  <Check className="h-8 w-8 text-success-soft-text" />
+                </div>
+                <div className="rounded-lg bg-primary-50 dark:bg-primary-500/10 p-3 space-y-2">
+                  <p className="text-sm text-primary-600 dark:text-primary-light">
+                    Invitation link created for email.
+                  </p>
+                  <div className="rounded bg-white dark:bg-slate-800 p-2">
+                    <p className="text-xs text-ink-muted break-all font-mono">{credentialsModal.inviteLink}</p>
+                  </div>
+                </div>
+                <a href={credentialsModal.sendUrl} className="btn btn-primary w-full justify-center text-sm">
+                  <Send className="h-4 w-4" />
+                  Open Email App to Send
+                </a>
+                <p className="text-xs text-ink-muted text-center">
+                  This opens your email app with the invitation pre-written. Just hit send.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
+                  <p className="text-xs text-ink-muted mb-1">Email</p>
+                  <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.email}</p>
+                </div>
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
+                  <p className="text-xs text-ink-muted mb-1">Password</p>
+                  <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.password}</p>
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>

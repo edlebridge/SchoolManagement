@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,23 +13,32 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { schoolId, studentName, parentName, parentEmail, parentPhone, relationship, channel, studentId, appOrigin } = await req.json();
+    const {
+      schoolId,
+      recipientName,
+      recipientEmail,
+      recipientPhone,
+      role,
+      channel,
+      appOrigin,
+      metadata,
+    } = await req.json();
 
-    if (!schoolId || !parentName || !studentName) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    if (!schoolId || !recipientName || !role) {
+      return new Response(JSON.stringify({ error: "Missing required fields (schoolId, recipientName, role)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (channel === "email" && !parentEmail) {
+    if (channel === "email" && !recipientEmail) {
       return new Response(JSON.stringify({ error: "Email is required for email channel" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (channel === "sms" && !parentPhone) {
+    if (channel === "sms" && !recipientPhone) {
       return new Response(JSON.stringify({ error: "Phone is required for SMS channel" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,42 +48,39 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
     // Generate a secure token
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
 
     // Create invitation record
-    const invRes = await fetch(`${supabaseUrl}/rest/v1/invitations`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${serviceRoleKey}`,
-        "apikey": serviceRoleKey,
-        "Prefer": "return=representation",
-      },
-      body: JSON.stringify({
+    const { data: invData, error: invErr } = await admin
+      .from("invitations")
+      .insert({
         school_id: schoolId,
         token,
-        role: "parent",
-        email: parentEmail ?? null,
-        phone: parentPhone ?? null,
-        full_name: parentName,
+        role,
+        email: recipientEmail ?? null,
+        phone: recipientPhone ?? null,
+        full_name: recipientName,
         status: "pending",
         channel: channel ?? "email",
-        metadata: { student_id: studentId, student_name: studentName, relationship },
+        metadata: metadata ?? {},
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      }),
-    });
+      })
+      .select("id")
+      .single();
 
-    if (!invRes.ok) {
-      const err = await invRes.json();
-      return new Response(JSON.stringify({ error: err.message ?? "Failed to create invitation" }), {
-        status: invRes.status,
+    if (invErr) {
+      return new Response(JSON.stringify({ error: invErr.message ?? "Failed to create invitation" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const invData = await invRes.json();
-    const invitationId = invData[0]?.id;
+    const invitationId = invData?.id;
 
     // Build the invitation link from the app origin passed by the frontend
     const origin = appOrigin ?? "https://edubridge.app";
