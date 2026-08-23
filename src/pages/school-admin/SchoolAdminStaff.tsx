@@ -1,5 +1,5 @@
 import { useState, useMemo, type FormEvent } from 'react';
-import { UserCog, Plus, Pencil, Trash2, Upload, Search, Mail, Phone, Building2, Send, Check } from 'lucide-react';
+import { UserCog, Plus, Pencil, Trash2, Upload, Search, Mail, Phone, Building2, Send, Check, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -39,6 +39,7 @@ interface TeacherFormState {
   subject_ids: string[];
   class_ids: string[];
   send_invite: boolean;
+  invite_channel: string;
 }
 
 const emptyForm: TeacherFormState = {
@@ -60,6 +61,7 @@ const emptyForm: TeacherFormState = {
   subject_ids: [],
   class_ids: [],
   send_invite: true,
+  invite_channel: 'email',
 };
 
 export function SchoolAdminStaff() {
@@ -78,7 +80,7 @@ export function SchoolAdminStaff() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [credentialsModal, setCredentialsModal] = useState<{ email: string; password: string; inviteLink: string | null; sendUrl: string | null } | null>(null);
+  const [credentialsModal, setCredentialsModal] = useState<{ email: string; password: string; inviteLink: string | null; emailSent: boolean; smsSent: boolean; sendError: string | null } | null>(null);
 
   const subjectMap = useMemo(() => {
     const map: Record<string, Subject> = {};
@@ -137,6 +139,7 @@ export function SchoolAdminStaff() {
       subject_ids: tSubjectIds,
       class_ids: tClassIds,
       send_invite: false,
+      invite_channel: 'email',
     });
     setAvatarFile(null);
     setAvatarPreview(t.avatar_url);
@@ -348,9 +351,11 @@ export function SchoolAdminStaff() {
 
       // Send invitation link if requested
       let inviteLink: string | null = null;
-      let sendUrl: string | null = null;
+      let emailSent = false;
+      let smsSent = false;
+      let sendError: string | null = null;
 
-      if (form.send_invite && form.email.trim()) {
+      if (form.send_invite && (form.email.trim() || form.phone.trim())) {
         try {
           const session = await supabase.auth.getSession();
           const invUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invitation`;
@@ -363,10 +368,10 @@ export function SchoolAdminStaff() {
             body: JSON.stringify({
               schoolId: SCHOOL_ID,
               recipientName: form.full_name.trim(),
-              recipientEmail: form.email.trim(),
-              recipientPhone: form.phone || null,
+              recipientEmail: form.email.trim() || null,
+              recipientPhone: form.phone.trim() || null,
               role: 'teacher',
-              channel: 'email',
+              channel: form.invite_channel,
               appOrigin: window.location.origin,
               metadata: { department: form.department },
             }),
@@ -375,16 +380,26 @@ export function SchoolAdminStaff() {
           if (invRes.ok) {
             const invData = await invRes.json();
             inviteLink = invData.inviteLink as string;
-            const subject = `You're invited to join EduBridge as a Teacher`;
-            const bodyText = `Hi ${form.full_name.trim()},\n\nYou've been added as a teacher on EduBridge.\n\nYour login credentials:\nEmail: ${form.email.trim()}\nPassword: ${DEFAULT_PASSWORD}\n\nOr click the link below to activate your account:\n${inviteLink}\n\nThis invitation expires in 7 days.`;
-            sendUrl = `mailto:${form.email.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+            emailSent = !!invData.emailSent;
+            smsSent = !!invData.smsSent;
+            sendError = invData.sendError ?? null;
+            if (emailSent || smsSent) {
+              toast('Invitation sent successfully', 'success');
+            } else if (sendError) {
+              toast(`Invitation delivery failed: ${sendError}`, 'error');
+            }
+          } else {
+            const err = await invRes.json().catch(() => ({ error: 'Failed' }));
+            sendError = err.error ?? 'Failed';
+            toast(`Invitation failed: ${sendError}`, 'error');
           }
-        } catch {
-          toast('Invitation link creation failed, but account was created', 'error');
+        } catch (err) {
+          sendError = (err as Error).message;
+          toast(`Invitation failed: ${sendError}`, 'error');
         }
       }
 
-      setCredentialsModal({ email: form.email.trim(), password: DEFAULT_PASSWORD, inviteLink, sendUrl });
+      setCredentialsModal({ email: form.email.trim(), password: DEFAULT_PASSWORD, inviteLink, emailSent, smsSent, sendError });
     }
 
     setSaving(false);
@@ -638,11 +653,27 @@ export function SchoolAdminStaff() {
                 <label className="flex items-center gap-2 text-sm font-medium text-ink dark:text-slate-100">
                   <input type="checkbox" checked={form.send_invite} onChange={(e) => setForm({ ...form, send_invite: e.target.checked })} className="rounded" />
                   <Send className="h-4 w-4 text-primary-600" />
-                  Send invitation link to teacher
+                  Send invitation to teacher
                 </label>
-                <p className="text-xs text-ink-muted ml-6">
-                  An invitation email with a login link and credentials will be generated for {form.email || 'the email above'}.
-                </p>
+                {form.send_invite && (
+                  <div className="ml-6 space-y-2">
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 text-sm text-ink-soft dark:text-slate-300">
+                        <input type="radio" checked={form.invite_channel === 'email'} onChange={() => setForm({ ...form, invite_channel: 'email' })} />
+                        <Mail className="h-3.5 w-3.5" /> Email
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-ink-soft dark:text-slate-300">
+                        <input type="radio" checked={form.invite_channel === 'sms'} onChange={() => setForm({ ...form, invite_channel: 'sms' })} />
+                        <MessageSquare className="h-3.5 w-3.5" /> SMS
+                      </label>
+                    </div>
+                    <p className="text-xs text-ink-muted">
+                      {form.invite_channel === 'email'
+                        ? `An invitation email with a login link will be sent to ${form.email || 'the email above'}.`
+                        : `An SMS with a login link will be sent to ${form.phone || 'the phone above'}.`}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
@@ -683,39 +714,37 @@ export function SchoolAdminStaff() {
       >
         {credentialsModal && (
           <div className="space-y-3">
-            {credentialsModal.sendUrl && credentialsModal.inviteLink ? (
+            {credentialsModal.emailSent ? (
+              <div className="rounded-lg bg-success-soft p-3 text-center">
+                <Check className="h-8 w-8 mx-auto text-success-soft-text mb-2" />
+                <p className="text-sm text-success-soft-text">Invitation email sent successfully to {credentialsModal.email}</p>
+              </div>
+            ) : credentialsModal.smsSent ? (
+              <div className="rounded-lg bg-success-soft p-3 text-center">
+                <Check className="h-8 w-8 mx-auto text-success-soft-text mb-2" />
+                <p className="text-sm text-success-soft-text">Invitation SMS sent successfully</p>
+              </div>
+            ) : credentialsModal.inviteLink ? (
               <>
-                <div className="flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-success-soft">
-                  <Check className="h-8 w-8 text-success-soft-text" />
-                </div>
-                <div className="rounded-lg bg-primary-50 dark:bg-primary-500/10 p-3 space-y-2">
-                  <p className="text-sm text-primary-600 dark:text-primary-light">
-                    Invitation link created for email.
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Delivery failed{credentialsModal.sendError ? `: ${credentialsModal.sendError}` : ''}. Share this link manually:
                   </p>
-                  <div className="rounded bg-white dark:bg-slate-800 p-2">
-                    <p className="text-xs text-ink-muted break-all font-mono">{credentialsModal.inviteLink}</p>
-                  </div>
                 </div>
-                <a href={credentialsModal.sendUrl} className="btn btn-primary w-full justify-center text-sm">
-                  <Send className="h-4 w-4" />
-                  Open Email App to Send
-                </a>
-                <p className="text-xs text-ink-muted text-center">
-                  This opens your email app with the invitation pre-written. Just hit send.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
-                  <p className="text-xs text-ink-muted mb-1">Email</p>
-                  <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.email}</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
-                  <p className="text-xs text-ink-muted mb-1">Password</p>
-                  <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.password}</p>
+                <div className="rounded bg-white dark:bg-slate-800 p-2">
+                  <p className="text-xs text-ink-muted break-all font-mono">{credentialsModal.inviteLink}</p>
                 </div>
               </>
-            )}
+            ) : null}
+
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
+              <p className="text-xs text-ink-muted mb-1">Email</p>
+              <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.email || '—'}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3">
+              <p className="text-xs text-ink-muted mb-1">Password</p>
+              <p className="font-mono text-sm text-ink dark:text-slate-100">{credentialsModal.password}</p>
+            </div>
           </div>
         )}
       </Modal>
