@@ -1,4 +1,5 @@
 import { useState, useMemo, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserCog, Plus, Pencil, Trash2, Upload, Search, Mail, Phone, Building2, Send, Check, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +15,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
-import { uploadFile, cn } from '@/lib/utils';
+import { uploadFile, cn, getAppOrigin } from '@/lib/utils';
 import type { AppUser, Subject, ClassRow } from '@/types';
 
 const SCHOOL_ID = 'ddccbf60-353f-40c5-a83f-3f8cf84eccfb';
@@ -68,6 +69,7 @@ export function SchoolAdminStaff() {
   const { profile } = useAuth();
   const { teachers, subjects, classes, classSubjects, loading, refresh } = useSchoolData();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
@@ -372,7 +374,7 @@ export function SchoolAdminStaff() {
               recipientPhone: form.phone.trim() || null,
               role: 'teacher',
               channel: form.invite_channel,
-              appOrigin: window.location.origin,
+              appOrigin: getAppOrigin(),
               metadata: { department: form.department },
             }),
           });
@@ -731,12 +733,15 @@ export function SchoolAdminStaff() {
                     Delivery failed{credentialsModal.sendError ? `: ${credentialsModal.sendError}` : ''}. Share this link:
                   </p>
                 </div>
-                <a
-                  href={credentialsModal.inviteLink}
+                <button
+                  onClick={() => {
+                    const path = new URL(credentialsModal.inviteLink!).pathname;
+                    navigate(path);
+                  }}
                   className="btn btn-primary w-full justify-center text-sm"
                 >
                   Register Now
-                </a>
+                </button>
               </>
             ) : null}
 

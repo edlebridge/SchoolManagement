@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Plus, Pencil, Trash2, Search, Mail, Phone, Link2, X, Send, Check, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -13,7 +14,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
-import { cn } from '@/lib/utils';
+import { cn, getAppOrigin } from '@/lib/utils';
 import type { AppUser, Student, StudentParent } from '@/types';
 
 const SCHOOL_ID = 'ddccbf60-353f-40c5-a83f-3f8cf84eccfb';
@@ -50,6 +51,7 @@ const emptyForm: ParentFormState = {
 export function SchoolAdminParents() {
   const { parents, students, loading, refresh } = useSchoolData();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
@@ -211,7 +213,7 @@ export function SchoolAdminParents() {
               recipientPhone: form.phone.trim() || null,
               role: 'parent',
               channel: form.invite_channel,
-              appOrigin: window.location.origin,
+              appOrigin: getAppOrigin(),
               metadata: {},
             }),
           });
@@ -555,12 +557,15 @@ export function SchoolAdminParents() {
                     Delivery failed{credentialsModal.sendError ? `: ${credentialsModal.sendError}` : ''}. Share this link:
                   </p>
                 </div>
-                <a
-                  href={credentialsModal.inviteLink}
+                <button
+                  onClick={() => {
+                    const path = new URL(credentialsModal.inviteLink!).pathname;
+                    navigate(path);
+                  }}
                   className="btn btn-primary w-full justify-center text-sm"
                 >
                   Register Now
-                </a>
+                </button>
               </>
             ) : null}
 

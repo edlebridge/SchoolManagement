@@ -43,6 +43,32 @@ export function initials(name: string): string {
   return name?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() ?? '?';
 }
 
+const PUBLIC_APP_URL = 'https://edubridge.app';
+
+/**
+ * Returns a stable, shareable app origin for invitation links.
+ *
+ * Bolt preview runs on internal hostnames like
+ * `*.local-credentialless.webcontainer-api.io` that are not reachable
+ * outside the preview iframe, so links generated from `window.location.origin`
+ * break when opened in a real browser or email client. When the current origin
+ * is one of those internal hosts, fall back to the public app URL instead.
+ */
+export function getAppOrigin(): string {
+  if (typeof window === 'undefined') return PUBLIC_APP_URL;
+  const origin = window.location.origin;
+  if (
+    origin.includes('webcontainer-api.io') ||
+    origin.includes('webcontainer.io') ||
+    origin.includes('.bolt.new') ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1')
+  ) {
+    return PUBLIC_APP_URL;
+  }
+  return origin;
+}
+
 import { supabase } from '@/lib/supabase';
 
 export async function uploadFile(bucket: string, path: string, file: File): Promise<string | null> {

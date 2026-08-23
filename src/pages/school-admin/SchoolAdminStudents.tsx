@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GraduationCap, Plus, Pencil, Trash2, Upload, Search, Users, Mail, Phone, Send, Check, ChevronRight, ChevronLeft, Link2, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +15,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
-import { uploadFile, cn, formatDate } from '@/lib/utils';
+import { uploadFile, cn, formatDate, getAppOrigin } from '@/lib/utils';
 import type { Student, ClassRow, AppUser, StudentParent } from '@/types';
 
 const SCHOOL_ID = 'ddccbf60-353f-40c5-a83f-3f8cf84eccfb';
@@ -74,6 +75,7 @@ export function SchoolAdminStudents() {
   const { profile, school } = useAuth();
   const { students, classes, parents, loading, refresh } = useSchoolData();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -338,7 +340,7 @@ export function SchoolAdminStudents() {
               relationship: parentForm.relationship,
               channel: parentForm.invite_channel,
               studentId: newStudentId,
-              appOrigin: window.location.origin,
+              appOrigin: getAppOrigin(),
             }),
           });
 
@@ -1024,12 +1026,15 @@ export function SchoolAdminStudents() {
                     Open {successModal.channel === 'email' ? 'Email' : 'SMS'} App to Send
                   </a>
                 )}
-                <a
-                  href={successModal.inviteLink}
+                <button
+                  onClick={() => {
+                    const path = new URL(successModal.inviteLink!).pathname;
+                    navigate(path);
+                  }}
                   className="btn btn-primary w-full justify-center text-sm"
                 >
                   Register Now
-                </a>
+                </button>
               </div>
             ) : successModal.credentials ? (
               <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3 space-y-2">

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Form';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Building2, Search, Ban, CircleCheck as CheckCircle2, Eye, Phone, Mail, MapPin, Users, GraduationCap, UserCog, Plus, Send, Check, Pencil, Trash2, MessageSquare, RefreshCw } from 'lucide-react';
-import { formatDate, cn } from '@/lib/utils';
+import { formatDate, cn, getAppOrigin } from '@/lib/utils';
 import type { School } from '@/types';
 
 interface SchoolWithCounts extends School {
@@ -67,6 +68,7 @@ const DEFAULT_PASSWORD = 'Password123!';
 export function SuperAdminSchools() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [schools, setSchools] = useState<SchoolWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -219,7 +221,7 @@ export function SuperAdminSchools() {
         recipientPhone: params.recipientPhone,
         role: params.role,
         channel: params.channel,
-        appOrigin: window.location.origin,
+        appOrigin: getAppOrigin(),
         metadata: params.metadata,
       }),
     });
@@ -793,12 +795,15 @@ export function SuperAdminSchools() {
                     Email delivery failed{successModal.sendError ? `: ${successModal.sendError}` : ''}. Share this link:
                   </p>
                 </div>
-                <a
-                  href={successModal.inviteLink}
+                <button
+                  onClick={() => {
+                    const path = new URL(successModal.inviteLink!).pathname;
+                    navigate(path);
+                  }}
                   className="btn btn-primary w-full justify-center text-sm"
                 >
                   Register Now
-                </a>
+                </button>
               </div>
             ) : null}
 
