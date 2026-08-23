@@ -1011,23 +1011,25 @@ export function SchoolAdminStudents() {
               </p>
             </div>
 
-            {successModal.sendUrl && successModal.inviteLink ? (
+            {successModal.inviteLink ? (
               <div className="space-y-3">
                 <div className="rounded-lg bg-primary-50 dark:bg-primary-500/10 p-3 space-y-2">
                   <p className="text-sm text-primary-600 dark:text-primary-light">
                     Invitation link created for {successModal.channel.toUpperCase()}.
                   </p>
-                  <div className="rounded bg-white dark:bg-slate-800 p-2">
-                    <p className="text-xs text-ink-muted break-all font-mono">{successModal.inviteLink}</p>
-                  </div>
                 </div>
-                <a href={successModal.sendUrl} className="btn btn-primary w-full justify-center text-sm">
-                  <Send className="h-4 w-4" />
-                  Open {successModal.channel === 'email' ? 'Email' : 'SMS'} App to Send
+                {successModal.sendUrl && (
+                  <a href={successModal.sendUrl} className="btn btn-secondary w-full justify-center text-sm">
+                    <Send className="h-4 w-4" />
+                    Open {successModal.channel === 'email' ? 'Email' : 'SMS'} App to Send
+                  </a>
+                )}
+                <a
+                  href={successModal.inviteLink}
+                  className="btn btn-primary w-full justify-center text-sm"
+                >
+                  Register Now
                 </a>
-                <p className="text-xs text-ink-muted text-center">
-                  This opens your {successModal.channel === 'email' ? 'email app' : 'messaging app'} with the invitation pre-written. Just hit send.
-                </p>
               </div>
             ) : successModal.credentials ? (
               <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3 space-y-2">

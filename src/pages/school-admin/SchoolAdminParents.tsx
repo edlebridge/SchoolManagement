@@ -552,12 +552,15 @@ export function SchoolAdminParents() {
               <>
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
                   <p className="text-sm text-amber-700 dark:text-amber-400">
-                    Delivery failed{credentialsModal.sendError ? `: ${credentialsModal.sendError}` : ''}. Share this link manually:
+                    Delivery failed{credentialsModal.sendError ? `: ${credentialsModal.sendError}` : ''}. Share this link:
                   </p>
                 </div>
-                <div className="rounded bg-white dark:bg-slate-800 p-2">
-                  <p className="text-xs text-ink-muted break-all font-mono">{credentialsModal.inviteLink}</p>
-                </div>
+                <a
+                  href={credentialsModal.inviteLink}
+                  className="btn btn-primary w-full justify-center text-sm"
+                >
+                  Register Now
+                </a>
               </>
             ) : null}
 

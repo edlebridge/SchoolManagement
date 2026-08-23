@@ -790,12 +790,15 @@ export function SuperAdminSchools() {
               <div className="space-y-3">
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
                   <p className="text-sm text-amber-700 dark:text-amber-400">
-                    Email delivery failed{successModal.sendError ? `: ${successModal.sendError}` : ''}. Share this link manually:
+                    Email delivery failed{successModal.sendError ? `: ${successModal.sendError}` : ''}. Share this link:
                   </p>
                 </div>
-                <div className="rounded bg-white dark:bg-slate-800 p-2">
-                  <p className="text-xs text-ink-muted break-all font-mono">{successModal.inviteLink}</p>
-                </div>
+                <a
+                  href={successModal.inviteLink}
+                  className="btn btn-primary w-full justify-center text-sm"
+                >
+                  Register Now
+                </a>
               </div>
             ) : null}
 

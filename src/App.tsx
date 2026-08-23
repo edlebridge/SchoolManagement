@@ -10,6 +10,7 @@ import { LayoutDashboard, BookOpen, GraduationCap, CalendarCheck, BookCopy, Clip
 
 // Auth
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { InvitePage } from '@/pages/auth/InvitePage';
 
 // School Admin
 import { SchoolAdminDashboard } from '@/pages/school-admin/SchoolAdminDashboard';
@@ -130,6 +131,7 @@ export default function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/invite/:token" element={<InvitePage />} />
                 <Route path="/" element={<RoleRedirect />} />
 
                 <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['super_admin']}><DashboardLayout navItems={superAdminNav} roleLabel="Super Admin" /></ProtectedRoute>}>
