@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
 import { relativeTime } from '@/lib/utils';
 
-const SCHOOL_ID = 'ddccbf60-353f-40c5-a83f-3f8cf84eccfb';
+const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 
 interface Announcement {
   id: string;

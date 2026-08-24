@@ -43,7 +43,7 @@ export function initials(name: string): string {
   return name?.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase() ?? '?';
 }
 
-const PUBLIC_APP_URL = 'https://edubridge.app';
+const PUBLIC_APP_URL = 'https://edlebridge-schoolman-cg21.bolt.host';
 
 /**
  * Returns a stable, shareable app origin for invitation links.
