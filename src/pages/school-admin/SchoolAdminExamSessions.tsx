@@ -19,7 +19,6 @@ import { formatDate } from '@/lib/utils';
 import { EXAM_SESSION_STATUSES, EXAM_SESSION_STATUS_LABELS } from '@/lib/constants';
 import type { ExamSession, AcademicYear, Term, Exam, ClassRow, Subject, AppUser, ClassSubject } from '@/types';
 
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 
 interface SessionFormState {
   name: string;
@@ -71,6 +70,7 @@ const emptyExamForm: ExamFormState = {
 
 export function SchoolAdminExamSessions() {
   const { profile } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { examSessions, classes, subjects, teachers, classSubjects, loading, refresh } = useSchoolData();
   const { years, terms } = useAcademic();
   const { toast } = useToast();
@@ -218,7 +218,7 @@ export function SchoolAdminExamSessions() {
 
     const sessionName = `${genTerm.name} Exams`;
     const { data: sessionData, error: sessionErr } = await supabase.from('exam_sessions').insert({
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       name: sessionName,
       academic_year_id: genTerm.academic_year_id,
       term_id: genTerm.id,
@@ -297,7 +297,7 @@ export function SchoolAdminExamSessions() {
           scheduledClassSlots.add(usedSlotKey(examDate, slotIdx, cls.id));
           if (teacherId) scheduledTeacherSlots.add(teacherBusyKey(examDate, slotIdx, teacherId));
           examsToInsert.push({
-            school_id: SCHOOL_ID,
+            school_id: schoolId,
             exam_session_id: sessionId,
             term_id: genTerm.id,
             name: `${subject.name} — ${cls.name}`,
@@ -326,7 +326,7 @@ export function SchoolAdminExamSessions() {
       for (const { cls, subject, teacherId } of remaining) {
         const base = startMinutes + extraSlot * (dur + 30);
         examsToInsert.push({
-          school_id: SCHOOL_ID,
+          school_id: schoolId,
           exam_session_id: sessionId,
           term_id: genTerm.id,
           name: `${subject.name} — ${cls.name}`,
@@ -390,7 +390,7 @@ export function SchoolAdminExamSessions() {
     setSavingSession(true);
     const willPublish = sessionForm.status === 'published';
     const payload: Record<string, unknown> = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       name: sessionForm.name.trim(),
       academic_year_id: sessionForm.academic_year_id,
       term_id: sessionForm.term_id || null,
@@ -531,7 +531,7 @@ export function SchoolAdminExamSessions() {
 
     setSavingExam(true);
     const payload: Record<string, unknown> = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       exam_session_id: viewingSession.id,
       term_id: viewingSession.term_id,
       name: examForm.name.trim() || `${subjectMap[examForm.subject_id]?.name ?? 'Exam'} — ${classMap[examForm.class_id]?.name ?? ''}`,

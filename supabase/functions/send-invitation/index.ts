@@ -9,6 +9,45 @@ const corsHeaders = {
 
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 const BREVO_SMS_URL = "https://api.brevo.com/v3/transactionalSMS/sms";
+const BREVO_TEMPLATES_URL = "https://api.brevo.com/v3/smtp/templates";
+
+interface BrevoTemplate {
+  id: number;
+  name?: string;
+  isActive?: boolean;
+  modifiedAt?: string;
+  createdAt?: string;
+}
+
+async function getActiveInvitationTemplateId(apiKey: string, role: string): Promise<number | null> {
+  const response = await fetch(`${BREVO_TEMPLATES_URL}?templateStatus=true&limit=50`, {
+    headers: { "api-key": apiKey },
+  });
+  if (!response.ok) return null;
+
+  const payload = await response.json() as { templates?: BrevoTemplate[] };
+  const templates = (payload.templates ?? []).filter((t) => t.isActive !== false && Number.isInteger(t.id));
+  if (templates.length === 0) return null;
+
+  const roleName = role === "school_admin" ? "admin" : role;
+  const roleMatch = templates.find((t) => {
+    const name = (t.name ?? "").toLowerCase();
+    return name.includes(roleName) && (name.includes("invite") || name.includes("invitation"));
+  });
+  if (roleMatch) return roleMatch.id;
+
+  const invitationMatch = templates.find((t) => {
+    const name = (t.name ?? "").toLowerCase();
+    return name.includes("invite") || name.includes("invitation");
+  });
+  if (invitationMatch) return invitationMatch.id;
+
+  return [...templates].sort((a, b) => {
+    const aDate = Date.parse(a.modifiedAt ?? a.createdAt ?? "") || 0;
+    const bDate = Date.parse(b.modifiedAt ?? b.createdAt ?? "") || 0;
+    return bDate - aDate;
+  })[0].id;
+}
 
 interface InvitationRequest {
   schoolId: string;
@@ -72,7 +111,6 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Look up the school to get its name and email for reply-to and template params
     let schoolName = (metadata as Record<string, unknown>).school_name as string ?? "";
     let schoolEmail = "";
     {
@@ -87,10 +125,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Generate a secure, unique, single-use token
     const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
 
-    // Create invitation record (expires in 7 days)
     const { data: invData, error: invErr } = await admin
       .from("invitations")
       .insert({
@@ -117,11 +153,9 @@ Deno.serve(async (req: Request) => {
 
     const invitationId = invData?.id;
 
-    // Build the invitation link from the app origin passed by the frontend
     const origin = appOrigin ?? "https://edlebridge-schoolman-cg21.bolt.host";
     const inviteLink = `${origin}/invite/${token}`;
 
-    // Send via Brevo
     const brevoApiKey = Deno.env.get("BREVO_API_KEY") ?? "";
     const brevoSenderEmail = Deno.env.get("BREVO_SENDER_EMAIL") ?? "";
     const brevoSenderName = Deno.env.get("BREVO_SENDER_NAME") ?? "EduBridge";
@@ -132,43 +166,46 @@ Deno.serve(async (req: Request) => {
 
     if (!brevoApiKey) {
       sendError = "BREVO_API_KEY not configured";
-    } else if (wantsEmail && recipientEmail && brevoSenderEmail) {
+    } else if (wantsEmail && !brevoSenderEmail) {
+      sendError = "BREVO_SENDER_EMAIL not configured";
+    } else if (wantsEmail && recipientEmail) {
       try {
-        // Use template 1 for school_admin, template 2 for teacher, template 3 for parent
-        const templateId = role === "school_admin" ? 1 : role === "teacher" ? 2 : 3;
-
-        const brevoBody: Record<string, unknown> = {
-          templateId,
-          sender: { email: brevoSenderEmail, name: brevoSenderName },
-          to: [{ email: recipientEmail, name: recipientName }],
-          params: {
-            schoolName,
-            adminName: recipientName,
-            recipientName,
-            invitationLink: inviteLink,
-            role,
-          },
-        };
-
-        // Use school email as reply-to when available
-        if (schoolEmail) {
-          brevoBody.replyTo = { email: schoolEmail, name: schoolName };
-        }
-
-        const brevoRes = await fetch(BREVO_API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": brevoApiKey,
-          },
-          body: JSON.stringify(brevoBody),
-        });
-
-        if (brevoRes.ok) {
-          emailSent = true;
+        const templateId = await getActiveInvitationTemplateId(brevoApiKey, role);
+        if (!templateId) {
+          sendError = "No active Brevo invitation template found";
         } else {
-          const brevoErr = await brevoRes.json().catch(() => ({}));
-          sendError = (brevoErr as Record<string, string>).message ?? `Brevo API returned ${brevoRes.status}`;
+          const brevoBody: Record<string, unknown> = {
+            templateId,
+            sender: { email: brevoSenderEmail, name: brevoSenderName },
+            to: [{ email: recipientEmail, name: recipientName }],
+            params: {
+              schoolName,
+              adminName: recipientName,
+              recipientName,
+              invitationLink: inviteLink,
+              role,
+            },
+          };
+
+          if (schoolEmail) {
+            brevoBody.replyTo = { email: schoolEmail, name: schoolName };
+          }
+
+          const brevoRes = await fetch(BREVO_API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "api-key": brevoApiKey,
+            },
+            body: JSON.stringify(brevoBody),
+          });
+
+          if (brevoRes.ok) {
+            emailSent = true;
+          } else {
+            const brevoErr = await brevoRes.json().catch(() => ({}));
+            sendError = (brevoErr as Record<string, string>).message ?? `Brevo API returned ${brevoRes.status}`;
+          }
         }
       } catch (err) {
         sendError = (err as Error).message;
@@ -201,9 +238,14 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Update invitation status to 'sent' if delivery succeeded
     if (emailSent || smsSent) {
-      await admin.from("invitations").update({ status: "sent" }).eq("id", invitationId);
+      const { error: statusError } = await admin
+        .from("invitations")
+        .update({ status: "sent" })
+        .eq("id", invitationId);
+      if (statusError) {
+        sendError = `Invitation was delivered, but its status could not be updated: ${statusError.message}`;
+      }
     }
 
     return new Response(JSON.stringify({

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Plus, Pencil, Trash2, Search, Mail, Phone, Link2, X, Send, Check, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSchoolData } from '@/hooks/useSchoolData';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -17,7 +18,6 @@ import { RowSkeleton } from '@/components/ui/Spinner';
 import { cn, getAppOrigin } from '@/lib/utils';
 import type { AppUser, Student, StudentParent } from '@/types';
 
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 const DEFAULT_PASSWORD = 'Password123!';
 
 interface ParentFormState {
@@ -49,6 +49,8 @@ const emptyForm: ParentFormState = {
 };
 
 export function SchoolAdminParents() {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { parents, students, loading, refresh } = useSchoolData();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -134,7 +136,7 @@ export function SchoolAdminParents() {
     setSaving(true);
 
     const payload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       role: 'parent' as const,
       full_name: form.full_name.trim(),
       phone: form.phone || null,
@@ -164,7 +166,7 @@ export function SchoolAdminParents() {
           password: DEFAULT_PASSWORD,
           fullName: form.full_name.trim(),
           phone: form.phone || null,
-          schoolId: SCHOOL_ID,
+          schoolId: schoolId,
           role: 'parent',
         }),
       });
@@ -207,7 +209,7 @@ export function SchoolAdminParents() {
               'Authorization': `Bearer ${session.data.session?.access_token}`,
             },
             body: JSON.stringify({
-              schoolId: SCHOOL_ID,
+              schoolId: schoolId,
               recipientName: form.full_name.trim(),
               recipientEmail: form.email.trim() || null,
               recipientPhone: form.phone.trim() || null,
@@ -272,7 +274,7 @@ export function SchoolAdminParents() {
     if (!linkParent || !linkStudentId) { toast('Select a student', 'error'); return; }
     setLinking(true);
     const { error } = await supabase.from('student_parents').insert({
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       student_id: linkStudentId,
       parent_user_id: linkParent.user_id,
       relationship: linkRelationship,

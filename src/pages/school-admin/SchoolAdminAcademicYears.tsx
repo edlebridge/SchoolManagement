@@ -2,6 +2,7 @@ import { useState, useMemo, type FormEvent } from 'react';
 import { CalendarDays, Plus, Pencil, Trash2, Archive, ArchiveRestore, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAcademic } from '@/context/AcademicContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -13,8 +14,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { CardSkeleton, RowSkeleton } from '@/components/ui/Spinner';
 import { formatDate, cn } from '@/lib/utils';
 import type { AcademicYear, Term } from '@/types';
-
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 
 interface YearFormState {
   name: string;
@@ -35,6 +34,8 @@ interface TermFormState {
 const emptyTermForm: TermFormState = { name: '', start_date: '', end_date: '', is_active: false };
 
 export function SchoolAdminAcademicYears() {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { years, terms, loading, refresh } = useAcademic();
   const { toast } = useToast();
 
@@ -96,11 +97,11 @@ export function SchoolAdminAcademicYears() {
 
     // If marking as active, deactivate other years
     if (yearForm.is_active) {
-      await supabase.from('academic_years').update({ is_active: false }).eq('school_id', SCHOOL_ID).neq('id', editingYear?.id ?? '00000000-0000-0000-0000-000000000000');
+      await supabase.from('academic_years').update({ is_active: false }).eq('school_id', schoolId).neq('id', editingYear?.id ?? '00000000-0000-0000-0000-000000000000');
     }
 
     const payload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       name: yearForm.name.trim(),
       start_date: yearForm.start_date,
       end_date: yearForm.end_date,
@@ -186,11 +187,11 @@ export function SchoolAdminAcademicYears() {
     setSavingTerm(true);
 
     if (termForm.is_active) {
-      await supabase.from('terms').update({ is_active: false }).eq('school_id', SCHOOL_ID).eq('academic_year_id', termParentYear.id).neq('id', editingTerm?.id ?? '00000000-0000-0000-0000-000000000000');
+      await supabase.from('terms').update({ is_active: false }).eq('school_id', schoolId).eq('academic_year_id', termParentYear.id).neq('id', editingTerm?.id ?? '00000000-0000-0000-0000-000000000000');
     }
 
     const payload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       academic_year_id: termParentYear.id,
       name: termForm.name.trim(),
       start_date: termForm.start_date,

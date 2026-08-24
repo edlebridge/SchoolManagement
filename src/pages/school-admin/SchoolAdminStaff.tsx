@@ -18,7 +18,6 @@ import { RowSkeleton } from '@/components/ui/Spinner';
 import { uploadFile, cn, getAppOrigin } from '@/lib/utils';
 import type { AppUser, Subject, ClassRow } from '@/types';
 
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 const DEFAULT_PASSWORD = 'Password123!';
 
 interface TeacherFormState {
@@ -67,6 +66,7 @@ const emptyForm: TeacherFormState = {
 
 export function SchoolAdminStaff() {
   const { profile } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { teachers, subjects, classes, classSubjects, loading, refresh } = useSchoolData();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -198,7 +198,7 @@ export function SchoolAdminStaff() {
     let avatarUrl = editing?.avatar_url ?? null;
     if (avatarFile) {
       const ext = avatarFile.name.split('.').pop();
-      const path = `${SCHOOL_ID}/avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = `${schoolId}/avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const url = await uploadFile('teacher-photos', path, avatarFile);
       if (url) avatarUrl = url;
     }
@@ -207,7 +207,7 @@ export function SchoolAdminStaff() {
     let idCardUrl = editing?.id_card_url ?? null;
     if (idCardFile) {
       const ext = idCardFile.name.split('.').pop();
-      const path = `${SCHOOL_ID}/id-cards/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = `${schoolId}/id-cards/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const url = await uploadFile('teacher-documents', path, idCardFile);
       if (url) idCardUrl = url;
     }
@@ -218,7 +218,7 @@ export function SchoolAdminStaff() {
       const uploaded: any[] = [];
       for (const file of certificateFiles) {
         const ext = file.name.split('.').pop();
-        const path = `${SCHOOL_ID}/certificates/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const path = `${schoolId}/certificates/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
         const url = await uploadFile('teacher-documents', path, file);
         if (url) uploaded.push({ name: file.name, url });
       }
@@ -226,7 +226,7 @@ export function SchoolAdminStaff() {
     }
 
     const payload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       role: 'teacher' as const,
       full_name: form.full_name.trim(),
       phone: form.phone || null,
@@ -265,7 +265,7 @@ export function SchoolAdminStaff() {
         for (const classId of form.class_ids) {
           for (const subjectId of form.subject_ids) {
             assignments.push({
-              school_id: SCHOOL_ID,
+              school_id: schoolId,
               class_id: classId,
               subject_id: subjectId,
               teacher_id: editing.id,
@@ -292,7 +292,7 @@ export function SchoolAdminStaff() {
           password: DEFAULT_PASSWORD,
           fullName: form.full_name.trim(),
           phone: form.phone || null,
-          schoolId: SCHOOL_ID,
+          schoolId: schoolId,
           role: 'teacher',
         }),
       });
@@ -337,7 +337,7 @@ export function SchoolAdminStaff() {
         for (const classId of form.class_ids) {
           for (const subjectId of form.subject_ids) {
             assignments.push({
-              school_id: SCHOOL_ID,
+              school_id: schoolId,
               class_id: classId,
               subject_id: subjectId,
               teacher_id: profileId,
@@ -368,7 +368,7 @@ export function SchoolAdminStaff() {
               'Authorization': `Bearer ${session.data.session?.access_token}`,
             },
             body: JSON.stringify({
-              schoolId: SCHOOL_ID,
+              schoolId: schoolId,
               recipientName: form.full_name.trim(),
               recipientEmail: form.email.trim() || null,
               recipientPhone: form.phone.trim() || null,

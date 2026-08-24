@@ -14,8 +14,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
 import { relativeTime } from '@/lib/utils';
 
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
-
 interface Announcement {
   id: string;
   school_id: string;
@@ -48,6 +46,7 @@ const AUDIENCE_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'sec
 
 export function SchoolAdminAnnouncements() {
   const { profile } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { toast } = useToast();
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -66,7 +65,7 @@ export function SchoolAdminAnnouncements() {
     supabase
       .from('announcements')
       .select('*')
-      .eq('school_id', SCHOOL_ID)
+      .eq('school_id', schoolId)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         if (error) {
@@ -110,7 +109,7 @@ export function SchoolAdminAnnouncements() {
 
     setSaving(true);
     const payload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       title: form.title.trim(),
       body: form.body.trim(),
       audience: form.audience,

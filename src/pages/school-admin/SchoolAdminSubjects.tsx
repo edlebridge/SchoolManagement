@@ -2,6 +2,7 @@ import { useState, useMemo, type FormEvent } from 'react';
 import { BookCopy, Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSchoolData } from '@/hooks/useSchoolData';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -14,8 +15,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
 import type { Subject } from '@/types';
 
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
-
 interface SubjectFormState {
   name: string;
   code: string;
@@ -24,6 +23,8 @@ interface SubjectFormState {
 const emptyForm: SubjectFormState = { name: '', code: '' };
 
 export function SchoolAdminSubjects() {
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { subjects, classSubjects, loading, refresh } = useSchoolData();
   const { toast } = useToast();
 
@@ -73,7 +74,7 @@ export function SchoolAdminSubjects() {
 
     setSaving(true);
     const payload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       name: form.name.trim(),
       code: form.code.trim() || null,
     };

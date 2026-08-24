@@ -18,7 +18,6 @@ import { RowSkeleton } from '@/components/ui/Spinner';
 import { uploadFile, cn, formatDate, getAppOrigin } from '@/lib/utils';
 import type { Student, ClassRow, AppUser, StudentParent } from '@/types';
 
-const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 const DEFAULT_PASSWORD = 'Password123!';
 
 interface StudentFormState {
@@ -73,6 +72,7 @@ const emptyParentForm: ParentFormState = {
 
 export function SchoolAdminStudents() {
   const { profile, school } = useAuth();
+  const schoolId = profile?.school_id ?? '';
   const { students, classes, parents, loading, refresh } = useSchoolData();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -206,14 +206,14 @@ export function SchoolAdminStudents() {
     let photoUrl: string | null = null;
     if (photoFile) {
       const ext = photoFile.name.split('.').pop();
-      const path = `${SCHOOL_ID}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = `${schoolId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       photoUrl = await uploadFile('student-photos', path, photoFile);
       if (!photoUrl) toast('Photo upload failed, but student will still be saved', 'error');
     }
 
     // 2. Insert student
     const studentPayload = {
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       full_name: studentForm.full_name.trim(),
       admission_number: studentForm.admission_number.trim(),
       gender: studentForm.gender || null,
@@ -248,7 +248,7 @@ export function SchoolAdminStudents() {
       // Link existing parent to student
       const existingParent = parentMap[existingParentId];
       const { error: linkErr } = await supabase.from('student_parents').insert({
-        school_id: SCHOOL_ID,
+        school_id: schoolId,
         student_id: newStudentId,
         parent_user_id: existingParent.user_id,
         relationship: parentForm.relationship,
@@ -276,7 +276,7 @@ export function SchoolAdminStudents() {
           password: DEFAULT_PASSWORD,
           fullName: parentForm.full_name.trim(),
           phone: parentForm.phone || null,
-          schoolId: SCHOOL_ID,
+          schoolId: schoolId,
           role: 'parent',
         }),
       });
@@ -304,7 +304,7 @@ export function SchoolAdminStudents() {
 
       // Link parent to student
       const { error: linkErr } = await supabase.from('student_parents').insert({
-        school_id: SCHOOL_ID,
+        school_id: schoolId,
         student_id: newStudentId,
         parent_user_id: parentUserId,
         relationship: parentForm.relationship,
@@ -332,7 +332,7 @@ export function SchoolAdminStudents() {
               'Authorization': `Bearer ${session.data.session?.access_token}`,
             },
             body: JSON.stringify({
-              schoolId: SCHOOL_ID,
+              schoolId: schoolId,
               studentName: studentForm.full_name,
               parentName: parentForm.full_name,
               parentEmail: parentForm.email.trim() || null,
@@ -414,7 +414,7 @@ export function SchoolAdminStudents() {
     let photoUrl = editing.photo_url;
     if (editPhotoFile) {
       const ext = editPhotoFile.name.split('.').pop();
-      const path = `${SCHOOL_ID}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = `${schoolId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const url = await uploadFile('student-photos', path, editPhotoFile);
       if (url) photoUrl = url;
     }
@@ -468,7 +468,7 @@ export function SchoolAdminStudents() {
     setLinkSaving(true);
     const parent = parentMap[linkParentId];
     const { error } = await supabase.from('student_parents').insert({
-      school_id: SCHOOL_ID,
+      school_id: schoolId,
       student_id: linkStudent.id,
       parent_user_id: parent.user_id,
       relationship: linkRelationship,
