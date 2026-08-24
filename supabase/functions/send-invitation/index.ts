@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
     const invitationId = invData?.id;
 
     // Build the invitation link from the app origin passed by the frontend
-    const origin = appOrigin ?? "https://edubridge.app";
+    const origin = appOrigin ?? "https://edlebridge-schoolman-cg21.bolt.host";
     const inviteLink = `${origin}/invite/${token}`;
 
     // Send via Brevo

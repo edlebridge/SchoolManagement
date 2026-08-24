@@ -18,7 +18,7 @@ import { RowSkeleton } from '@/components/ui/Spinner';
 import { uploadFile, cn, formatDate, getAppOrigin } from '@/lib/utils';
 import type { Student, ClassRow, AppUser, StudentParent } from '@/types';
 
-const SCHOOL_ID = 'ddccbf60-353f-40c5-a83f-3f8cf84eccfb';
+const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 const DEFAULT_PASSWORD = 'Password123!';
 
 interface StudentFormState {

@@ -19,7 +19,7 @@ import { formatDate } from '@/lib/utils';
 import { EXAM_SESSION_STATUSES, EXAM_SESSION_STATUS_LABELS } from '@/lib/constants';
 import type { ExamSession, AcademicYear, Term, Exam, ClassRow, Subject, AppUser, ClassSubject } from '@/types';
 
-const SCHOOL_ID = 'ddccbf60-353f-40c5-a83f-3f8cf84eccfb';
+const SCHOOL_ID = '47e97532-69b5-4229-92ff-7c15b7135ac5';
 
 interface SessionFormState {
   name: string;
