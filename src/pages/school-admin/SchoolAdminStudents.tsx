@@ -296,10 +296,13 @@ export function SchoolAdminStudents() {
 
       // Update parent profile with extended fields
       if (parentProfileId) {
-        await supabase.from('app_users').update({
+        const { error: parentUpdateErr } = await supabase.from('app_users').update({
           gender: null,
           address: null,
         }).eq('id', parentProfileId);
+        if (parentUpdateErr) {
+          toast(`Parent created, but profile update failed: ${parentUpdateErr.message}`, 'error');
+        }
       }
 
       // Link parent to student
@@ -333,14 +336,13 @@ export function SchoolAdminStudents() {
             },
             body: JSON.stringify({
               schoolId: schoolId,
-              studentName: studentForm.full_name,
-              parentName: parentForm.full_name,
-              parentEmail: parentForm.email.trim() || null,
-              parentPhone: parentForm.phone || null,
-              relationship: parentForm.relationship,
+              recipientName: parentForm.full_name,
+              recipientEmail: parentForm.email.trim() || null,
+              recipientPhone: parentForm.phone || null,
+              role: 'parent',
               channel: parentForm.invite_channel,
-              studentId: newStudentId,
               appOrigin: getAppOrigin(),
+              metadata: { student_name: studentForm.full_name, relationship: parentForm.relationship },
             }),
           });
 

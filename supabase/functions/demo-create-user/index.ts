@@ -29,7 +29,6 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Try to create auth user
     let userId: string;
     const { data: userData, error: authErr } = await admin.auth.admin.createUser({
       email,
@@ -39,7 +38,6 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authErr) {
-      // If already registered, look up the existing auth user
       if (authErr.message?.toLowerCase().includes("already") || authErr.message?.toLowerCase().includes("registered")) {
         const { data: listData, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 });
         if (listErr || !listData?.users) {
@@ -56,7 +54,6 @@ Deno.serve(async (req: Request) => {
           });
         }
         userId = existing.id;
-        // Update their password so they can log in with the new credentials
         await admin.auth.admin.updateUserById(userId, { password });
       } else {
         return new Response(JSON.stringify({ error: authErr.message ?? "Failed to create user" }), {
@@ -73,22 +70,20 @@ Deno.serve(async (req: Request) => {
       userId = userData.user.id;
     }
 
-    // Check if app_users profile already exists for this user+school
+    // app_users has UNIQUE(user_id) — one profile per auth user across all schools.
+    // Check by user_id only, not school_id.
     const { data: existingProfile } = await admin
       .from("app_users")
-      .select("id")
+      .select("id, school_id, role")
       .eq("user_id", userId)
-      .eq("school_id", schoolId)
       .maybeSingle();
 
     if (existingProfile) {
-      // Profile already exists — just return the IDs so the caller can link
       return new Response(JSON.stringify({ userId, profileId: existingProfile.id }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Insert app_users profile
     const { data: profile, error: profileErr } = await admin
       .from("app_users")
       .insert({

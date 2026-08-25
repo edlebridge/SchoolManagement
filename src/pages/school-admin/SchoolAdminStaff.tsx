@@ -313,7 +313,11 @@ export function SchoolAdminStaff() {
 
       // Update the app_users record with extended profile fields
       if (profileId) {
-        await supabase.from('app_users').update({
+        let idCardUrl: string | null = null;
+        if (idCardFile) {
+          idCardUrl = await uploadFile('teacher-documents', `id-cards/${userId}-${idCardFile.name}`, idCardFile);
+        }
+        const { error: updateErr } = await supabase.from('app_users').update({
           gender: form.gender || null,
           date_of_birth: form.date_of_birth || null,
           nationality: form.nationality || null,
@@ -327,8 +331,11 @@ export function SchoolAdminStaff() {
           emergency_contact_name: form.emergency_contact_name || null,
           emergency_contact_phone: form.emergency_contact_phone || null,
           avatar_url: avatarPreview,
-          id_card_url: idCardFile ? await uploadFile('teacher-documents', `id-cards/${userId}-${idCardFile.name}`, idCardFile) : null,
+          id_card_url: idCardUrl,
         }).eq('id', profileId);
+        if (updateErr) {
+          toast(`Teacher created, but profile update failed: ${updateErr.message}`, 'error');
+        }
       }
 
       // Insert class_subjects assignments
@@ -345,7 +352,10 @@ export function SchoolAdminStaff() {
           }
         }
         if (assignments.length > 0) {
-          await supabase.from('class_subjects').upsert(assignments, { onConflict: 'class_id,subject_id' });
+          const { error: csErr } = await supabase.from('class_subjects').upsert(assignments, { onConflict: 'class_id,subject_id' });
+          if (csErr) {
+            toast(`Teacher created, but subject assignment failed: ${csErr.message}`, 'error');
+          }
         }
       }
 
