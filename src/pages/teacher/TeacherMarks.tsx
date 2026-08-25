@@ -214,7 +214,7 @@ export function TeacherMarks() {
           total_marks: totalMarks,
           grade,
           teacher_comment: null,
-          entered_by: profile.id,
+          entered_by: profile.user_id,
         };
       });
 
@@ -232,8 +232,8 @@ export function TeacherMarks() {
       if (error) throw error;
       toast(`Saved ${rows.length} mark${rows.length !== 1 ? 's' : ''} successfully`);
       loadMarks();
-    } catch {
-      toast('Failed to save marks', 'error');
+    } catch (err) {
+      toast((err as Error).message || 'Failed to save marks', 'error');
     } finally {
       setSaving(false);
     }
