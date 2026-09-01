@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, CalendarCheck, BookOpen, ChartBar as BarChart3, Megaphone, MessageSquare, User, ChevronDown, TrendingUp, Award, CircleAlert as AlertCircle } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, BookOpen, ChartBar as BarChart3, Megaphone, MessageSquare, User, ChevronDown, TrendingUp, Award, CircleAlert as AlertCircle, Paperclip } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useParent } from '@/context/ParentContext';
@@ -15,6 +15,13 @@ import { RowSkeleton, CardSkeleton } from '@/components/ui/Spinner';
 import { formatDate, relativeTime, percentage, cn } from '@/lib/utils';
 import type { Attendance, Homework, ExamMark } from '@/types';
 
+interface Attachment {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+}
+
 interface Announcement {
   id: string;
   school_id: string;
@@ -23,6 +30,7 @@ interface Announcement {
   body: string;
   audience: string;
   class_id: string | null;
+  attachments: Attachment[] | null;
   created_at: string;
 }
 
@@ -327,6 +335,16 @@ export function ParentDashboard() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-ink dark:text-slate-100">{ann.title}</p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted">{ann.body}</p>
+                    {ann.attachments && ann.attachments.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {ann.attachments.map((att, i) => (
+                          <a key={i} href={att.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-600 hover:bg-primary-100 dark:bg-primary-500/15 dark:text-primary-light dark:hover:bg-primary-500/25">
+                            <Paperclip className="h-3 w-3" />
+                            {att.name}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     <p className="mt-1 text-xs text-ink-muted">{relativeTime(ann.created_at)}</p>
                   </div>
                 </div>

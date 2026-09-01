@@ -1,5 +1,5 @@
-import { useState, useEffect, type FormEvent } from 'react';
-import { Megaphone, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { Megaphone, Plus, Pencil, Trash2, Search, Paperclip, X, FileText, File } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -15,6 +15,13 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton } from '@/components/ui/Spinner';
 import { relativeTime } from '@/lib/utils';
 
+interface Attachment {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+}
+
 interface Announcement {
   id: string;
   school_id: string;
@@ -23,6 +30,7 @@ interface Announcement {
   body: string;
   audience: string;
   class_id: string | null;
+  attachments: Attachment[] | null;
   created_at: string;
 }
 
@@ -59,6 +67,19 @@ const AUDIENCE_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'sec
 
 const AUDIENCES_REQUIRING_CLASS = ['class', 'class_all'];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileIcon(type: string) {
+  if (type.startsWith('image/')) return <FileText className="h-4 w-4" />;
+  return <File className="h-4 w-4" />;
+}
+
 export function SchoolAdminAnnouncements() {
   const { profile } = useAuth();
   const schoolId = profile?.school_id ?? '';
@@ -75,6 +96,10 @@ export function SchoolAdminAnnouncements() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const classNameMap = useState(() => {
     const map: Record<string, string> = {};
@@ -113,16 +138,59 @@ export function SchoolAdminAnnouncements() {
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm);
+    setAttachments([]);
     setModalOpen(true);
   };
 
   const openEdit = (a: Announcement) => {
     setEditing(a);
     setForm({ title: a.title, body: a.body, audience: a.audience, class_id: a.class_id ?? '' });
+    setAttachments(a.attachments ?? []);
     setModalOpen(true);
   };
 
   const needsClass = AUDIENCES_REQUIRING_CLASS.includes(form.audience);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast(`"${file.name}" exceeds the 10 MB limit`, 'error');
+        return;
+      }
+    }
+
+    setUploading(true);
+    try {
+      const uploaded: Attachment[] = [];
+      for (const file of files) {
+        const ext = file.name.split('.').pop() ?? 'file';
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const path = `${schoolId}/${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from('announcement-attachments')
+          .upload(path, file, { upsert: false });
+        if (uploadError) {
+          toast(`Failed to upload ${file.name}: ${uploadError.message}`, 'error');
+          continue;
+        }
+        const { data: urlData } = supabase.storage
+          .from('announcement-attachments')
+          .getPublicUrl(path);
+        uploaded.push({ name: file.name, url: urlData.publicUrl, size: file.size, type: file.type || ext });
+      }
+      setAttachments((prev) => [...prev, ...uploaded]);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -143,6 +211,7 @@ export function SchoolAdminAnnouncements() {
       audience: form.audience,
       class_id: needsClass ? form.class_id : null,
       author_id: profile?.user_id ?? null,
+      attachments: attachments.length > 0 ? attachments : [],
     };
 
     if (editing) {
@@ -190,6 +259,12 @@ export function SchoolAdminAnnouncements() {
         <div className="max-w-md">
           <p className="font-medium text-ink dark:text-slate-100">{a.title}</p>
           <p className="text-xs text-ink-muted truncate">{a.body}</p>
+          {a.attachments && a.attachments.length > 0 && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-primary-600 dark:text-primary-light">
+              <Paperclip className="h-3 w-3" />
+              <span>{a.attachments.length} attachment{a.attachments.length !== 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -258,7 +333,7 @@ export function SchoolAdminAnnouncements() {
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit Announcement' : 'New Announcement'}
         description={editing ? `Editing "${editing.title}"` : 'Post a new announcement'}
-        size="lg"
+        size="xl"
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
@@ -268,7 +343,7 @@ export function SchoolAdminAnnouncements() {
       >
         <form id="announcement-form" onSubmit={submit} className="space-y-4">
           <Input label="Title *" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. School Closure Notice" />
-          <Textarea label="Body *" required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Write your announcement here…" className="min-h-[120px]" />
+          <Textarea label="Body *" required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Write your announcement here…" className="min-h-[260px] text-sm leading-relaxed" />
           <Select label="Audience" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value, class_id: '' })}>
             <option value="school">Everyone</option>
             <option value="teachers">Teachers only</option>
@@ -298,6 +373,57 @@ export function SchoolAdminAnnouncements() {
               </p>
             </div>
           )}
+
+          {/* Attachments */}
+          <div>
+            <label className="input-label">Attachments</label>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.gif,.webp,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                leftIcon={<Paperclip className="h-4 w-4" />}
+                loading={uploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Attach File
+              </Button>
+              <span className="text-xs text-ink-muted">PDF, Word, Excel, images — up to 10 MB each</span>
+            </div>
+
+            {attachments.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {attachments.map((att, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-light">
+                      {fileIcon(att.type)}
+                    </div>
+                    <div className="min-w0 flex-1">
+                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-medium text-ink hover:text-primary-600 dark:text-slate-100">
+                        {att.name}
+                      </a>
+                      <p className="text-xs text-ink-muted">{formatFileSize(att.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(i)}
+                      className="rounded-lg p-1 text-ink-muted hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-slate-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </form>
       </Modal>
 
