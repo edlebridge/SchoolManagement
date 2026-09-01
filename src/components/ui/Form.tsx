@@ -14,11 +14,11 @@ export function Input({ label, error, leftIcon, ...props }: { label?: string; er
   );
 }
 
-export function Textarea({ label, error, ...props }: { label?: string; error?: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({ label, error, className, ...props }: { label?: string; error?: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <div>
       {label && <label className="input-label">{label}</label>}
-      <textarea className={cn('input min-h-[80px] resize-y', props.className)} {...props} />
+      <textarea {...props} className={cn('input w-full min-h-[80px] resize-y box-border', className)} />
       {error && <p className="mt-1 text-xs text-error-soft-text">{error}</p>}
     </div>
   );
