@@ -94,7 +94,7 @@ export function DashboardLayout({ navItems, roleLabel }: { navItems: NavItem[]; 
             {userMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setUserMenu(false)} />
-                <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-surface-border bg-surface py-2 shadow-xl">
+                <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-surface-border bg-surface py-2 shadow-xl z-20">
                   <div className="border-b border-surface-border px-4 py-2">
                     <p className="text-sm font-medium text-ink">{profile?.full_name}</p>
                     <p className="text-xs text-ink-muted">{profile?.phone ?? 'No phone'}</p>
