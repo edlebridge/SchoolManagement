@@ -16,7 +16,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { cn, formatDate, relativeTime } from '@/lib/utils';
 import type { ParentAttendanceRequest, AttendanceRequestType, AttendanceRequestStatus } from '@/types';
 
-const REQUEST_TYPE_META: Record<AttendanceRequestType, { label: string; icon: typeof Clock; color: string }> = {
+const REQUEST_TYPE_META: Record<AttendanceRequestType, { label: string; icon: typeof Clock3; color: string }> = {
   absence: { label: 'Absence', icon: FileText, color: 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400' },
   late: { label: 'Late Arrival', icon: Clock3, color: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400' },
   early_collection: { label: 'Early Collection', icon: DoorOpen, color: 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400' },

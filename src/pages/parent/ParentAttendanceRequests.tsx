@@ -211,7 +211,7 @@ export function ParentAttendanceRequests() {
     const childName = child.full_name;
     const typeLabel = REQUEST_TYPE_META[formType!].label;
     const notifTitle = `${typeLabel}: ${childName}`;
-    const notifBody = notes.trim() || undefined;
+    const notifBody = notes.trim() || null;
 
     // Find school admins for this school
     const { data: admins } = await supabase
@@ -388,7 +388,7 @@ export function ParentAttendanceRequests() {
                       <Badge variant={status.variant}>{status.label}</Badge>
                     </div>
                     <p className="text-xs text-ink-muted">
-                      {nameMap[req.student_id] ?? 'Unknown child'}
+                      {req.student_id ? (nameMap[req.student_id] ?? 'Unknown child') : 'Unknown child'}
                     </p>
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-muted">
                       {req.request_type === 'absence' && (
