@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 export function Input({ label, error, leftIcon, ...props }: { label?: string; error?: string; leftIcon?: ReactNode } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -17,7 +18,7 @@ export function Textarea({ label, error, ...props }: { label?: string; error?: s
   return (
     <div>
       {label && <label className="input-label">{label}</label>}
-      <textarea className="input min-h-[80px] resize-y" {...props} />
+      <textarea className={cn('input min-h-[80px] resize-y', props.className)} {...props} />
       {error && <p className="mt-1 text-xs text-error-soft-text">{error}</p>}
     </div>
   );
