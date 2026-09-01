@@ -1,4 +1,4 @@
-import { LayoutDashboard, GraduationCap, Users, BookOpen, BookCopy, CalendarDays, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Users, BookOpen, BookCopy, CalendarDays, ClipboardList, CalendarCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { useAcademic } from '@/context/AcademicContext';
@@ -8,12 +8,28 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { RowSkeleton, CardSkeleton } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
-import { formatDate } from '@/lib/utils';
+import { formatDate, relativeTime } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
+import type { ParentAttendanceRequest } from '@/types';
 
 export function SchoolAdminDashboard() {
   const { profile, school } = useAuth();
   const { students, teachers, classes, subjects, examSessions, loading } = useSchoolData();
   const { years, terms, selectedYearId, selectedTermId } = useAcademic();
+  const [pendingRequests, setPendingRequests] = useState<ParentAttendanceRequest[]>([]);
+
+  useEffect(() => {
+    if (!profile?.school_id) return;
+    supabase
+      .from('parent_attendance_requests')
+      .select('*')
+      .eq('school_id', profile.school_id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data }) => setPendingRequests((data as ParentAttendanceRequest[]) ?? []));
+  }, [profile?.school_id]);
 
   const activeYear = years.find((y) => y.id === selectedYearId);
   const activeTerm = terms.find((t) => t.id === selectedTermId);
@@ -128,6 +144,36 @@ export function SchoolAdminDashboard() {
           )}
         </Card>
       </div>
+
+      {/* Pending Attendance Requests */}
+      {pendingRequests.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader
+            title="Pending Attendance Requests"
+            subtitle={`${pendingRequests.length} request${pendingRequests.length !== 1 ? 's' : ''} awaiting review`}
+            action={<CalendarCheck className="h-5 w-5 text-amber-500" />}
+          />
+          <div className="space-y-2">
+            {pendingRequests.map((req) => {
+              const student = students.find((s) => s.id === req.student_id);
+              const cls = classes.find((c) => c.id === req.class_id);
+              const typeLabel = req.request_type === 'absence' ? 'Absence' : req.request_type === 'late' ? 'Late Arrival' : 'Early Collection';
+              return (
+                <div key={req.id} className="flex items-center justify-between rounded-lg bg-amber-50 dark:bg-amber-500/10 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <p className="text-sm font-medium text-ink dark:text-slate-100">{typeLabel}: {student?.full_name ?? 'Unknown'}</p>
+                      <p className="text-xs text-ink-muted">{cls?.name ?? '—'} · {relativeTime(req.created_at)}</p>
+                    </div>
+                  </div>
+                  <Badge variant="warning">Pending</Badge>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

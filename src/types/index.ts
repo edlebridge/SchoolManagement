@@ -227,3 +227,42 @@ export interface StudentParent {
   created_at: string;
   updated_at: string;
 }
+
+export type AttendanceRequestType = 'absence' | 'late' | 'early_collection';
+export type AttendanceRequestStatus = 'pending' | 'approved' | 'rejected' | 'acknowledged';
+
+export interface ParentAttendanceRequest {
+  id: string;
+  school_id: string;
+  parent_user_id: string;
+  student_id: string | null;
+  class_id: string | null;
+  request_type: AttendanceRequestType;
+  status: AttendanceRequestStatus;
+  reason: string | null;
+  custom_reason: string | null;
+  from_date: string | null;
+  to_date: string | null;
+  date: string | null;
+  expected_arrival_time: string | null;
+  leaving_time: string | null;
+  collected_by: string | null;
+  notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AppNotification {
+  id: string;
+  school_id: string | null;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
+}

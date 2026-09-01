@@ -205,6 +205,21 @@ export function TeacherMessages() {
       setMessages((prev) => [...prev, newMsg]);
       setAllMessages((prev) => [...prev, newMsg]);
       setNewMessage('');
+
+      // Notify the recipient
+      try {
+        await supabase.from('notifications').insert({
+          school_id: profile.school_id,
+          user_id: selectedContact.user_id,
+          type: 'message',
+          title: `New message from ${profile?.full_name ?? 'Teacher'}`,
+          body: newMessage.trim().slice(0, 100),
+          link: '/parent/messages',
+        });
+      } catch {
+        // Non-critical
+      }
+
       toast('Message sent');
     } catch {
       toast('Failed to send message', 'error');

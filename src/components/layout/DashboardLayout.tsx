@@ -4,6 +4,7 @@ import { LogOut, ChevronDown, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Avatar } from '@/components/ui/Avatar';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 import { cn } from '@/lib/utils';
 
 export interface NavItem {
@@ -49,6 +50,7 @@ export function DashboardLayout({ navItems, roleLabel }: { navItems: NavItem[]; 
           </nav>
 
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <button onClick={toggleTheme}
               className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-surface-overlay text-ink-soft"
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>

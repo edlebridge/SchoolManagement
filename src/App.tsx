@@ -23,6 +23,7 @@ import { SchoolAdminAcademicYears } from '@/pages/school-admin/SchoolAdminAcadem
 import { SchoolAdminAnnouncements } from '@/pages/school-admin/SchoolAdminAnnouncements';
 import { SchoolAdminParents } from '@/pages/school-admin/SchoolAdminParents';
 import { SchoolAdminProfile } from '@/pages/school-admin/SchoolAdminProfile';
+import { SchoolAdminAttendanceRequests } from '@/pages/school-admin/SchoolAdminAttendanceRequests';
 
 // Teacher
 import { TeacherDashboard } from '@/pages/teacher/TeacherDashboard';
@@ -34,6 +35,7 @@ import { TeacherMarks } from '@/pages/teacher/TeacherMarks';
 import { TeacherResults } from '@/pages/teacher/TeacherResults';
 import { TeacherMessages } from '@/pages/teacher/TeacherMessages';
 import { TeacherProfile } from '@/pages/teacher/TeacherProfile';
+import { TeacherAttendanceRequests } from '@/pages/teacher/TeacherAttendanceRequests';
 
 // Super Admin
 import { SuperAdminDashboard } from '@/pages/super-admin/SuperAdminDashboard';
@@ -52,6 +54,7 @@ import { ParentResults } from '@/pages/parent/ParentResults';
 import { ParentExams } from '@/pages/parent/ParentExams';
 import { ParentMessages } from '@/pages/parent/ParentMessages';
 import { ParentProfile } from '@/pages/parent/ParentProfile';
+import { ParentAttendanceRequests } from '@/pages/parent/ParentAttendanceRequests';
 
 function FullPageLoader() {
   return (
@@ -97,6 +100,7 @@ const schoolAdminNav: NavItem[] = [
   { label: 'Academic Years', to: '/school-admin/academic-years', icon: <CalendarDays className="h-5 w-5" /> },
   { label: 'Exam Sessions', to: '/school-admin/exam-sessions', icon: <ClipboardList className="h-5 w-5" /> },
   { label: 'Announcements', to: '/school-admin/announcements', icon: <Megaphone className="h-5 w-5" /> },
+  { label: 'Requests', to: '/school-admin/attendance-requests', icon: <CalendarCheck className="h-5 w-5" /> },
   { label: 'Profile', to: '/school-admin/profile', icon: <User className="h-5 w-5" /> },
 ];
 
@@ -109,6 +113,7 @@ const teacherNav: NavItem[] = [
   { label: 'Marks', to: '/teacher/marks', icon: <FileText className="h-5 w-5" /> },
   { label: 'Results', to: '/teacher/results', icon: <Award className="h-5 w-5" /> },
   { label: 'Messages', to: '/teacher/messages', icon: <MessageSquare className="h-5 w-5" /> },
+  { label: 'Requests', to: '/teacher/attendance-requests', icon: <CalendarCheck className="h-5 w-5" /> },
   { label: 'Profile', to: '/teacher/profile', icon: <User className="h-5 w-5" /> },
 ];
 
@@ -119,6 +124,7 @@ const parentNav: NavItem[] = [
   { label: 'Exams', to: '/parent/exams', icon: <ClipboardList className="h-5 w-5" /> },
   { label: 'Results', to: '/parent/results', icon: <Award className="h-5 w-5" /> },
   { label: 'Messages', to: '/parent/messages', icon: <MessageSquare className="h-5 w-5" /> },
+  { label: 'Requests', to: '/parent/attendance-requests', icon: <CalendarCheck className="h-5 w-5" /> },
   { label: 'Profile', to: '/parent/profile', icon: <User className="h-5 w-5" /> },
 ];
 
@@ -154,6 +160,7 @@ export default function App() {
                   <Route path="academic-years" element={<SchoolAdminAcademicYears />} />
                   <Route path="exam-sessions" element={<SchoolAdminExamSessions />} />
                   <Route path="announcements" element={<SchoolAdminAnnouncements />} />
+                  <Route path="attendance-requests" element={<SchoolAdminAttendanceRequests />} />
                   <Route path="profile" element={<SchoolAdminProfile />} />
                 </Route>
 
@@ -166,6 +173,7 @@ export default function App() {
                   <Route path="marks" element={<TeacherMarks />} />
                   <Route path="results" element={<TeacherResults />} />
                   <Route path="messages" element={<TeacherMessages />} />
+                  <Route path="attendance-requests" element={<TeacherAttendanceRequests />} />
                   <Route path="profile" element={<TeacherProfile />} />
                 </Route>
 
@@ -176,6 +184,7 @@ export default function App() {
                   <Route path="exams" element={<ParentExams />} />
                   <Route path="results" element={<ParentResults />} />
                   <Route path="messages" element={<ParentMessages />} />
+                  <Route path="attendance-requests" element={<ParentAttendanceRequests />} />
                   <Route path="profile" element={<ParentProfile />} />
                 </Route>
 

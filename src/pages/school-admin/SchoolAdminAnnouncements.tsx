@@ -229,6 +229,68 @@ export function SchoolAdminAnnouncements() {
         setSaving(false);
         return;
       }
+
+      // Send notifications to relevant users
+      try {
+        let targetUserIds: string[] = [];
+        const audience = form.audience;
+
+        if (audience === 'school' || audience === 'teachers' || audience === 'parents') {
+          const roleFilter = audience === 'school' ? undefined : audience;
+          let query = supabase.from('app_users').select('user_id').eq('school_id', schoolId).eq('active', true);
+          if (roleFilter) query = query.eq('role', roleFilter);
+          const { data: users } = await query;
+          targetUserIds = (users ?? []).map((u: { user_id: string }) => u.user_id);
+        } else if (audience === 'class' || audience === 'class_all') {
+          // Get parents of students in this class
+          const { data: students } = await supabase
+            .from('students')
+            .select('id')
+            .eq('school_id', schoolId)
+            .eq('class_id', form.class_id);
+          const studentIds = (students ?? []).map((s: { id: string }) => s.id);
+
+          if (studentIds.length > 0) {
+            const { data: parentLinks } = await supabase
+              .from('student_parents')
+              .select('parent_user_id')
+              .in('student_id', studentIds);
+            targetUserIds = [...new Set((parentLinks ?? []).map((p: { parent_user_id: string }) => p.parent_user_id))];
+          }
+
+          if (audience === 'class_all') {
+            // Also notify the class teacher
+            const { data: cls } = await supabase
+              .from('classes')
+              .select('class_teacher_id')
+              .eq('id', form.class_id)
+              .maybeSingle();
+            if (cls?.class_teacher_id) {
+              const { data: teacher } = await supabase
+                .from('app_users')
+                .select('user_id')
+                .eq('id', cls.class_teacher_id)
+                .maybeSingle();
+              if (teacher?.user_id) targetUserIds.push(teacher.user_id);
+            }
+          }
+        }
+
+        if (targetUserIds.length > 0) {
+          const notifs = targetUserIds.map((uid) => ({
+            school_id: schoolId,
+            user_id: uid,
+            type: 'announcement',
+            title: `New Announcement: ${form.title.trim()}`,
+            body: form.body.trim().slice(0, 100),
+            link: '/parent',
+          }));
+          await supabase.from('notifications').insert(notifs);
+        }
+      } catch {
+        // Non-critical: notification failure shouldn't block the announcement
+      }
+
       toast('Announcement published');
     }
 

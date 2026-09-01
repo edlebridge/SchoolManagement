@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Users, GraduationCap, BookOpen, ClipboardCheck, Calendar, TrendingUp } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, ClipboardCheck, Calendar, TrendingUp, CalendarCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { useAcademic } from '@/context/AcademicContext';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RowSkeleton, CardSkeleton } from '@/components/ui/Spinner';
 import { formatDate, relativeTime } from '@/lib/utils';
 import type { Homework } from '@/types';
+import type { ParentAttendanceRequest } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 
@@ -21,6 +22,7 @@ export function TeacherDashboard() {
   const { years, selectedYearId } = useAcademic();
   const [homework, setHomework] = useState<Homework[]>([]);
   const [homeworkLoading, setHomeworkLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState<ParentAttendanceRequest[]>([]);
 
   // My classes: where I'm the class teacher OR I teach a subject in that class
   const myClasses = useMemo(() => {
@@ -61,6 +63,20 @@ export function TeacherDashboard() {
     if (!selectedYearId) return examSessions;
     return examSessions.filter((es) => es.academic_year_id === selectedYearId);
   }, [examSessions, selectedYearId]);
+
+  // Fetch pending attendance requests for my classes
+  useEffect(() => {
+    if (!profile?.school_id || myClassIds.length === 0) return;
+    supabase
+      .from('parent_attendance_requests')
+      .select('*')
+      .eq('school_id', profile.school_id)
+      .eq('status', 'pending')
+      .in('class_id', myClassIds)
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data }) => setPendingRequests((data as ParentAttendanceRequest[]) ?? []));
+  }, [profile?.school_id, myClassIds]);
 
   const activeYear = years.find((y) => y.id === selectedYearId);
 
@@ -230,6 +246,36 @@ export function TeacherDashboard() {
           )}
         </Card>
       </div>
+
+      {/* Pending Attendance Requests */}
+      {pendingRequests.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader
+            title="Pending Attendance Requests"
+            subtitle={`${pendingRequests.length} request${pendingRequests.length !== 1 ? 's' : ''} awaiting your review`}
+            action={<CalendarCheck className="h-5 w-5 text-amber-500" />}
+          />
+          <div className="space-y-2">
+            {pendingRequests.map((req) => {
+              const student = students.find((s) => s.id === req.student_id);
+              const cls = classes.find((c) => c.id === req.class_id);
+              const typeLabel = req.request_type === 'absence' ? 'Absence' : req.request_type === 'late' ? 'Late Arrival' : 'Early Collection';
+              return (
+                <div key={req.id} className="flex items-center justify-between rounded-lg bg-amber-50 dark:bg-amber-500/10 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <p className="text-sm font-medium text-ink dark:text-slate-100">{typeLabel}: {student?.full_name ?? 'Unknown'}</p>
+                      <p className="text-xs text-ink-muted">{cls?.name ?? '—'} · {relativeTime(req.created_at)}</p>
+                    </div>
+                  </div>
+                  <Badge variant="warning">Pending</Badge>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Recent Students */}
       <div className="mt-6">
