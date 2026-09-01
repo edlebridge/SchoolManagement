@@ -1,0 +1,6 @@
+import { Tabs } from 'expo-router';
+import { CalendarCheck, Hop as Home, MessageCircle, BookOpen, User } from 'lucide-react-native';
+import { colors } from '@/theme';
+import { ParentMobileProvider } from '@/context/ParentMobileContext';
+
+export default function ParentLayout() { return <ParentMobileProvider><Tabs screenOptions={{ tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarStyle: { height: 70, paddingBottom: 10, paddingTop: 8 }, headerShown: false }}><Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home color={color} size={size} /> }} /><Tabs.Screen name="attendance" options={{ title: 'Attendance', tabBarIcon: ({ color, size }) => <CalendarCheck color={color} size={size} /> }} /><Tabs.Screen name="homework" options={{ title: 'Homework', tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} /> }} /><Tabs.Screen name="messages" options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} /> }} /><Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User color={color} size={size} /> }} /></Tabs></ParentMobileProvider>; }
