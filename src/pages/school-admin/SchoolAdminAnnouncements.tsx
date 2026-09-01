@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { Megaphone, Plus, Pencil, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import { useToast } from '@/context/ToastContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -21,6 +22,7 @@ interface Announcement {
   title: string;
   body: string;
   audience: string;
+  class_id: string | null;
   created_at: string;
 }
 
@@ -28,25 +30,39 @@ interface AnnouncementFormState {
   title: string;
   body: string;
   audience: string;
+  class_id: string;
 }
 
-const emptyForm: AnnouncementFormState = { title: '', body: '', audience: 'all' };
+const emptyForm: AnnouncementFormState = { title: '', body: '', audience: 'school', class_id: '' };
 
 const AUDIENCE_LABELS: Record<string, string> = {
-  all: 'Everyone',
+  school: 'Everyone',
   teachers: 'Teachers',
   parents: 'Parents',
+  students: 'Students',
+  class: 'Specific Class',
+  class_all: 'Class (Students + Parents + Teacher)',
+  staff: 'Staff',
+  emergency: 'Emergency',
 };
 
-const AUDIENCE_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'secondary'> = {
-  all: 'primary',
+const AUDIENCE_VARIANTS: Record<string, 'primary' | 'success' | 'warning' | 'secondary' | 'error'> = {
+  school: 'primary',
   teachers: 'success',
   parents: 'warning',
+  students: 'secondary',
+  class: 'secondary',
+  class_all: 'primary',
+  staff: 'secondary',
+  emergency: 'error',
 };
+
+const AUDIENCES_REQUIRING_CLASS = ['class', 'class_all'];
 
 export function SchoolAdminAnnouncements() {
   const { profile } = useAuth();
   const schoolId = profile?.school_id ?? '';
+  const { classes, loading: schoolDataLoading } = useSchoolData();
   const { toast } = useToast();
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -59,6 +75,12 @@ export function SchoolAdminAnnouncements() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const classNameMap = useState(() => {
+    const map: Record<string, string> = {};
+    classes.forEach((c) => { map[c.id] = c.name; });
+    return map;
+  })[0];
 
   const load = () => {
     setLoading(true);
@@ -82,10 +104,10 @@ export function SchoolAdminAnnouncements() {
 
   const filteredAnnouncements = search.trim()
     ? announcements.filter((a) =>
-        a.title.toLowerCase().includes(search.toLowerCase()) ||
-        a.body.toLowerCase().includes(search.toLowerCase()) ||
-        a.audience.toLowerCase().includes(search.toLowerCase())
-      )
+      a.title.toLowerCase().includes(search.toLowerCase()) ||
+      a.body.toLowerCase().includes(search.toLowerCase()) ||
+      a.audience.toLowerCase().includes(search.toLowerCase())
+    )
     : announcements;
 
   const openAdd = () => {
@@ -96,14 +118,20 @@ export function SchoolAdminAnnouncements() {
 
   const openEdit = (a: Announcement) => {
     setEditing(a);
-    setForm({ title: a.title, body: a.body, audience: a.audience });
+    setForm({ title: a.title, body: a.body, audience: a.audience, class_id: a.class_id ?? '' });
     setModalOpen(true);
   };
+
+  const needsClass = AUDIENCES_REQUIRING_CLASS.includes(form.audience);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.body.trim()) {
       toast('Title and body are required', 'error');
+      return;
+    }
+    if (needsClass && !form.class_id) {
+      toast('Please select a class for this audience', 'error');
       return;
     }
 
@@ -113,7 +141,8 @@ export function SchoolAdminAnnouncements() {
       title: form.title.trim(),
       body: form.body.trim(),
       audience: form.audience,
-      author_id: profile?.id ?? null,
+      class_id: needsClass ? form.class_id : null,
+      author_id: profile?.user_id ?? null,
     };
 
     if (editing) {
@@ -167,7 +196,11 @@ export function SchoolAdminAnnouncements() {
     {
       key: 'audience',
       header: 'Audience',
-      render: (a) => <Badge variant={AUDIENCE_VARIANTS[a.audience] ?? 'secondary'}>{AUDIENCE_LABELS[a.audience] ?? a.audience}</Badge>,
+      render: (a) => {
+        const label = AUDIENCE_LABELS[a.audience] ?? a.audience;
+        const classPart = a.class_id ? ` · ${classNameMap[a.class_id] ?? 'Class'}` : '';
+        return <Badge variant={AUDIENCE_VARIANTS[a.audience] ?? 'secondary'}>{label}{classPart}</Badge>;
+      },
     },
     {
       key: 'created_at',
@@ -236,11 +269,35 @@ export function SchoolAdminAnnouncements() {
         <form id="announcement-form" onSubmit={submit} className="space-y-4">
           <Input label="Title *" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. School Closure Notice" />
           <Textarea label="Body *" required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Write your announcement here…" className="min-h-[120px]" />
-          <Select label="Audience" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })}>
-            <option value="all">Everyone</option>
-            <option value="teachers">Teachers</option>
-            <option value="parents">Parents</option>
+          <Select label="Audience" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value, class_id: '' })}>
+            <option value="school">Everyone</option>
+            <option value="teachers">Teachers only</option>
+            <option value="parents">Parents only</option>
+            <option value="students">Students only</option>
+            <option value="class">A specific class</option>
+            <option value="class_all">A specific class (Students + Parents + Class Teacher)</option>
           </Select>
+          {needsClass && (
+            <Select
+              label="Class *"
+              required
+              value={form.class_id}
+              onChange={(e) => setForm({ ...form, class_id: e.target.value })}
+              disabled={schoolDataLoading}
+            >
+              <option value="">Select a class…</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+          )}
+          {needsClass && form.class_id && form.audience === 'class_all' && (
+            <div className="rounded-lg bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-500/20 p-3">
+              <p className="text-sm text-primary-700 dark:text-primary-light">
+                This announcement will be visible to all students, parents, and the class teacher of <strong>{classNameMap[form.class_id] ?? 'this class'}</strong>.
+              </p>
+            </div>
+          )}
         </form>
       </Modal>
 

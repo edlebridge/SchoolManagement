@@ -22,6 +22,7 @@ interface Announcement {
   title: string;
   body: string;
   audience: string;
+  class_id: string | null;
   created_at: string;
 }
 
@@ -58,14 +59,24 @@ export function ParentDashboard() {
         supabase.from('attendance').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('date', { ascending: false }).limit(100),
         classId ? supabase.from('homework').select('*').eq('school_id', profile.school_id).eq('class_id', classId).order('due_date', { ascending: true }) : Promise.resolve({ data: [] }),
         supabase.from('exam_marks').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('created_at', { ascending: false }),
-        supabase.from('announcements').select('*').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('announcements').select('*').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(20),
       ]);
+
+      // Filter announcements to only those relevant to this parent:
+      // school-wide, parents-only, or class-targeted matching the child's class.
+      const childClassId = selectedChild.class_id;
+      const allAnnouncements = (announcementsRes.data as Announcement[]) ?? [];
+      const visibleAnnouncements = allAnnouncements.filter((a) => {
+        if (a.audience === 'school' || a.audience === 'parents') return true;
+        if ((a.audience === 'class' || a.audience === 'class_all') && a.class_id && a.class_id === childClassId) return true;
+        return false;
+      });
 
       setStats({
         attendanceRecords: (attendanceRes.data as Attendance[]) ?? [],
         homeworkList: (homeworkRes.data as Homework[]) ?? [],
         examMarks: (marksRes.data as ExamMark[]) ?? [],
-        announcements: (announcementsRes.data as Announcement[]) ?? [],
+        announcements: visibleAnnouncements,
       });
     } catch {
       setStats({ attendanceRecords: [], homeworkList: [], examMarks: [], announcements: [] });
