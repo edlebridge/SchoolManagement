@@ -17,14 +17,26 @@ const items: DrawerItem[] = [
 
 export default function ParentLayout() {
   const { colors } = useTheme();
-  return <ParentMobileProvider><DrawerLayout items={items}><Tabs screenOptions={{ tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarStyle: { height: 70, paddingBottom: 10, paddingTop: 8, backgroundColor: colors.surface, borderTopColor: colors.border }, header: ({ route }) => <DrawerHeader title={route.name === 'index' ? 'Dashboard' : route.name.charAt(0).toUpperCase() + route.name.slice(1)} /> }}>
-    <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home color={color} size={size} /> }} />
-    <Tabs.Screen name="attendance" options={{ title: 'Attendance', tabBarIcon: ({ color, size }) => <CalendarCheck color={color} size={size} /> }} />
-    <Tabs.Screen name="homework" options={{ title: 'Homework', tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} /> }} />
-    <Tabs.Screen name="exams" options={{ title: 'Exams', tabBarIcon: ({ color, size }) => <ClipboardCheck color={color} size={size} /> }} />
-    <Tabs.Screen name="results" options={{ title: 'Results', tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} /> }} />
-    <Tabs.Screen name="messages" options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} /> }} />
-    <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: ({ color, size }) => <FileText color={color} size={size} /> }} />
-    <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User color={color} size={size} /> }} />
-  </Tabs></DrawerLayout></ParentMobileProvider>;
+  return (
+    <ParentMobileProvider>
+      <DrawerLayout items={items}>
+        <Tabs screenOptions={{
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.muted,
+          tabBarStyle: { height: 64, paddingBottom: 8, paddingTop: 8, backgroundColor: colors.surface, borderTopColor: colors.border },
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+          header: ({ route }) => <DrawerHeader title={route.name === 'index' ? 'Dashboard' : route.name.charAt(0).toUpperCase() + route.name.slice(1)} />,
+        }}>
+          <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home color={color} size={size} /> }} />
+          <Tabs.Screen name="attendance" options={{ title: 'Attendance', tabBarIcon: ({ color, size }) => <CalendarCheck color={color} size={size} /> }} />
+          <Tabs.Screen name="homework" options={{ title: 'Homework', tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} /> }} />
+          <Tabs.Screen name="messages" options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} /> }} />
+          <Tabs.Screen name="exams" options={{ title: 'Exams', tabBarIcon: ({ color, size }) => <ClipboardCheck color={color} size={size} />, href: null }} />
+          <Tabs.Screen name="results" options={{ title: 'Results', tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />, href: null }} />
+          <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: ({ color, size }) => <FileText color={color} size={size} />, href: null }} />
+          <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User color={color} size={size} />, href: null }} />
+        </Tabs>
+      </DrawerLayout>
+    </ParentMobileProvider>
+  );
 }

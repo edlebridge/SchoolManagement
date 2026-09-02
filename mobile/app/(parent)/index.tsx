@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Link } from 'expo-router';
-import { CalendarCheck, BookOpen, ChartBar as BarChart3, ChevronRight, ClipboardCheck, FileText, Megaphone } from 'lucide-react-native';
+import { CalendarCheck, BookOpen, ChartBar as BarChart3, Megaphone } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useParentMobile } from '@/context/ParentMobileContext';
 import { supabase } from '@/lib/supabase';
@@ -16,6 +15,7 @@ function HomeContent() {
   const { colors, styles } = useTheme();
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
+  const [examMarks, setExamMarks] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
 
@@ -23,14 +23,16 @@ function HomeContent() {
     if (!selectedChild || !profile?.school_id) return;
     (async () => {
       setFetching(true);
-      const [a, h, an] = await Promise.all([
+      const [a, h, an, mk] = await Promise.all([
         supabase.from('attendance').select('status').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('date', { ascending: false }).limit(100),
         selectedChild.class_id ? supabase.from('homework').select('*').eq('school_id', profile.school_id).eq('class_id', selectedChild.class_id).order('due_date', { ascending: true }).limit(10) : Promise.resolve({ data: [] }),
         supabase.from('announcements').select('*').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('exam_marks').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('created_at', { ascending: false }).limit(10),
       ]);
       setAttendance((a.data as Attendance[]) ?? []);
       setHomework((h.data as Homework[]) ?? []);
       setAnnouncements((an.data as any[]) ?? []);
+      setExamMarks((mk.data as any[]) ?? []);
       setFetching(false);
     })();
   }, [selectedChild, profile?.school_id]);
@@ -84,35 +86,58 @@ function HomeContent() {
             <StatCard icon={<CalendarCheck color={colors.success} size={22} />} value={`${attPct}%`} label="Attendance" color={colors.success} />
             <StatCard icon={<BookOpen color={colors.primary} size={22} />} value={homework.length} label="Homework" color={colors.primary} />
           </View>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+            <StatCard icon={<BarChart3 color={colors.primary} size={22} />} value={examMarks.length} label="Results" color={colors.primary} />
+          </View>
 
-          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Quick Access</Text>
-          {[
-            { label: 'Attendance', href: '/(parent)/attendance', Icon: CalendarCheck },
-            { label: 'Homework', href: '/(parent)/homework', Icon: BookOpen },
-            { label: 'Exams', href: '/(parent)/exams', Icon: ClipboardCheck },
-            { label: 'Results', href: '/(parent)/results', Icon: BarChart3 },
-            { label: 'Messages', href: '/(parent)/messages', Icon: Megaphone },
-            { label: 'Requests', href: '/(parent)/requests', Icon: FileText },
-          ].map(({ label, href, Icon }) => (
-            <Link key={label} href={href as any} asChild>
-              <Pressable><Card>
-                <View style={styles.row}>
-                  <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon color={colors.primary} size={21} />
+          {homework.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Recent Homework</Text>
+              {homework.slice(0, 5).map((h) => {
+                const isOverdue = new Date(h.due_date) < new Date();
+                return (
+                  <Card key={h.id}>
+                    <View style={styles.row}>
+                      <BookOpen color={isOverdue ? colors.error : colors.primary} size={20} />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={{ fontWeight: '700', color: colors.ink }}>{h.title}</Text>
+                        <Text style={{ color: colors.muted, marginTop: 3 }}>Due {formatDate(h.due_date)}</Text>
+                      </View>
+                      {isOverdue && <Badge label="Overdue" color={colors.error} bg={colors.errorSoft} />}
+                    </View>
+                  </Card>
+                );
+              })}
+            </>
+          )}
+
+          {examMarks.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Recent Results</Text>
+              {examMarks.slice(0, 5).map((m) => (
+                <Card key={m.id}>
+                  <View style={styles.row}>
+                    <BarChart3 color={colors.primary} size={20} />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={{ fontWeight: '700', color: colors.ink }}>{m.marks}/{m.total_marks}</Text>
+                      <Text style={{ color: colors.muted, marginTop: 3 }}>Grade: {m.grade}</Text>
+                    </View>
+                    <Badge label={m.grade} color={colors.primary} bg={colors.primarySoft} />
                   </View>
-                  <Text style={{ flex: 1, marginLeft: 12, fontWeight: '700', color: colors.ink }}>{label}</Text>
-                  <ChevronRight color={colors.muted} size={20} />
-                </View>
-              </Card></Pressable>
-            </Link>
-          ))}
+                </Card>
+              ))}
+            </>
+          )}
 
           {announcements.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Announcements</Text>
               {announcements.map((a) => (
                 <Card key={a.id}>
-                  <Text style={{ fontWeight: '700', color: colors.ink }}>{a.title}</Text>
+                  <View style={styles.row}>
+                    <Megaphone color={colors.muted} size={18} />
+                    <Text style={{ fontWeight: '700', color: colors.ink, marginLeft: 8, flex: 1 }}>{a.title}</Text>
+                  </View>
                   {a.body ? <Text style={{ color: colors.muted, marginTop: 6, lineHeight: 20 }}>{a.body}</Text> : null}
                   <Text style={{ color: colors.muted, marginTop: 6, fontSize: 12 }}>{relativeTime(a.created_at)}</Text>
                 </Card>
