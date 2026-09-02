@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import { Bell, Menu, X } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
@@ -24,6 +25,7 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
   const router = useRouter();
   const pathname = usePathname();
   const { colors } = useTheme();
+  const { top } = useSafeAreaInsets();
 
   const active = useMemo(() => {
     return items.find((item) => {
@@ -40,7 +42,7 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
       {children}
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
         <Pressable style={{ flex: 1, flexDirection: 'row' }} onPress={() => setVisible(false)}>
-          <Pressable style={{ width: '78%', maxWidth: 320, backgroundColor: colors.surface, paddingTop: 60, paddingHorizontal: 16 }} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={{ width: '78%', maxWidth: 320, backgroundColor: colors.surface, paddingTop: top + 16, paddingHorizontal: 16 }} onPress={(e) => e.stopPropagation()}>
             <Pressable onPress={() => setVisible(false)} style={{ position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 1 }}>
               <X color={colors.muted} size={22} />
             </Pressable>
@@ -66,6 +68,7 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
 export function DrawerHeader({ title }: { title: string }) {
   const { open } = useMobileDrawer();
   const { colors } = useTheme();
+  const { top } = useSafeAreaInsets();
   const { profile } = useAuth();
   const [unread, setUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -99,7 +102,7 @@ export function DrawerHeader({ title }: { title: string }) {
 
   return (
     <>
-      <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ height: top + 56, paddingTop: top, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <Pressable onPress={open} style={{ padding: 8, marginRight: 8 }}>
           <Menu color={colors.ink} size={24} />
         </Pressable>
