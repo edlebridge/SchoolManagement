@@ -3,14 +3,14 @@ import { StyleSheet } from 'react-native';
 export type ThemeMode = 'light' | 'dark';
 
 export const lightColors = {
-  primary: '#0f766e', primaryDark: '#115e59', primarySoft: '#ccfbf1',
+  primary: '#ea580c', primaryDark: '#c2410c', primarySoft: '#ffedd5',
   ink: '#172033', muted: '#64748b', surface: '#ffffff', bg: '#f5f7f9',
   border: '#e2e8f0', success: '#15803d', successSoft: '#dcfce7',
   warning: '#b45309', warningSoft: '#fef3c7', error: '#b91c1c', errorSoft: '#fee2e2',
 };
 
 export const darkColors = {
-  primary: '#6b7280', primaryDark: '#4b5563', primarySoft: '#374151',
+  primary: '#f97316', primaryDark: '#ea580c', primarySoft: '#431407',
   ink: '#f1f5f9', muted: '#94a3b8', surface: '#1e293b', bg: '#0f172a',
   border: '#334155', success: '#22c55e', successSoft: '#14532d',
   warning: '#f59e0b', warningSoft: '#78350f', error: '#ef4444', errorSoft: '#450a0a',

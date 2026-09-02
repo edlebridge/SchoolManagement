@@ -16,8 +16,7 @@ export default function Login() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
-            <Image source={require('../assets/EdLe_Bridge_Logo.png')} style={{ width: 144, height: 144, resizeMode: 'contain' }} />
-          <Text style={{ color: colors.ink, fontSize: 30, fontWeight: '800', marginTop: 16 }}>EdLe Bridge</Text>
+            <Image source={require('../assets/EdLe_Bridge_Logo.png')} style={{ width: 260, height: 180, resizeMode: 'contain' }} />
           <Text style={styles.subtitle}>Your school, always within reach.</Text>
           </View>
           <View style={styles.card}>
