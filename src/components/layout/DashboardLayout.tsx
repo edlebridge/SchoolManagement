@@ -43,9 +43,9 @@ export function DashboardLayout({ navItems, roleLabel }: { navItems: NavItem[]; 
         {/* Logo header */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-surface-border px-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white font-bold">E</div>
+            <img src="/EdLe_Bridge_Logo.png" alt="EdLe Bridge" className="h-9 w-9 rounded-xl object-contain" />
             <div className="min-w-0">
-              <p className="font-bold leading-none text-ink">EduBridge</p>
+              <p className="font-bold leading-none text-ink">EdLe Bridge</p>
               <p className="mt-0.5 truncate text-xs text-ink-muted">{school?.name ?? ''}</p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/context/ToastContext';
 import { useTheme } from '@/context/ThemeContext';
-import { GraduationCap, Sun, Moon } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,19 +29,19 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-bg text-ink">
+    <div className="flex min-h-screen items-center justify-center p-4 text-ink relative overflow-hidden"
+      style={{ backgroundImage: 'url(/EdLe_Bridge_Background.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <div className="absolute inset-0 bg-black/40" />
       <button onClick={toggleTheme}
-        className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-surface-overlay text-ink-soft"
+        className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-white/10 text-white"
         title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
         {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </button>
-      <div className="w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white">
-            <GraduationCap className="h-7 w-7" />
-          </div>
-          <h1 className="text-2xl font-bold text-ink">EduBridge</h1>
-          <p className="text-sm mt-1 text-ink-muted">School Management System</p>
+          <img src="/EdLe_Bridge_Logo.png" alt="EdLe Bridge" className="mx-auto mb-4 h-20 w-auto" />
+          <h1 className="text-2xl font-bold text-white">EdLe Bridge</h1>
+          <p className="text-sm mt-1 text-white/80">School Management System</p>
         </div>
         <div className="card p-6">
           <h2 className="text-lg font-semibold mb-4 text-ink">Sign In</h2>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
-import { Trophy } from 'lucide-react-native';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { Trophy, Download } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useParentMobile } from '@/context/ParentMobileContext';
 import { supabase } from '@/lib/supabase';
@@ -75,6 +75,17 @@ export default function ParentResults() {
   const totalMax = marks.reduce((sum, m) => sum + m.total_marks, 0);
   const avgPct = totalMax ? percentage(totalObtained, totalMax) : 0;
 
+  const downloadCSV = () => {
+    if (!resultRows.length) return;
+    const headers = ['Subject', 'Exam', 'Marks', 'Total', 'Percentage', 'Grade'];
+    const lines = [headers.join(',')];
+    resultRows.forEach((r) => { lines.push([`"${r.subjectName}"`, `"${r.examName}"`, String(r.mark.marks), String(r.mark.total_marks), `${r.pct}%`, r.grade].join(',')); });
+    lines.push('');
+    lines.push(`"Overall","","${totalObtained}","${totalMax}","${avgPct}%",""`);
+    const csv = lines.join('\n');
+    Share.share({ message: csv, title: `Results_${selectedChild?.full_name ?? 'student'}` }).catch(() => {});
+  };
+
   if (loading || fetching) return <Loading />;
 
   return (
@@ -96,6 +107,10 @@ export default function ParentResults() {
             <StatCard icon={<Trophy color={colors.primary} size={22} />} value={`${avgPct}%`} label="Average" color={colors.primary} />
             <StatCard icon={<Trophy color={colors.primary} size={22} />} value={resultRows.length} label="Subjects" color={colors.primary} />
           </View>
+
+          <Pressable onPress={downloadCSV} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft, borderRadius: 14, paddingVertical: 13, marginTop: 12 }}>
+            <Download color={colors.primary} size={18} /><Text style={{ color: colors.primary, fontWeight: '700', marginLeft: 6 }}>Download Results</Text>
+          </Pressable>
 
           <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Subject Results</Text>
           {resultRows.map((r) => (

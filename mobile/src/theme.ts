@@ -10,7 +10,7 @@ export const lightColors = {
 };
 
 export const darkColors = {
-  primary: '#2dd4bf', primaryDark: '#14b8a6', primarySoft: '#134e4a',
+  primary: '#6b7280', primaryDark: '#4b5563', primarySoft: '#374151',
   ink: '#f1f5f9', muted: '#94a3b8', surface: '#1e293b', bg: '#0f172a',
   border: '#334155', success: '#22c55e', successSoft: '#14532d',
   warning: '#f59e0b', warningSoft: '#78350f', error: '#ef4444', errorSoft: '#450a0a',
