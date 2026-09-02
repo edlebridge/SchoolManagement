@@ -29,18 +29,16 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 text-ink relative overflow-hidden"
-      style={{ backgroundImage: 'url(/EdLe_Bridge_Background.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-      <div className="absolute inset-0 bg-black/40" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white p-4 text-ink">
       <button onClick={toggleTheme}
-        className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-white/10 text-white"
+        className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100"
         title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
         {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </button>
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/EdLe_Bridge_Logo.png" alt="EdLe Bridge" className="mx-auto mb-2 h-40 w-auto max-w-[320px] object-contain" />
-          <p className="text-sm mt-2 text-white/80">School Management System</p>
+          <img src="/EdLe_Bridge_Logo copy 2.png" alt="EdLe Bridge" className="mx-auto mb-3 h-auto w-[360px] max-w-[88vw] object-contain" />
+          <p className="mt-2 text-sm text-slate-600">School Management System</p>
         </div>
         <div className="card p-6">
           <h2 className="text-lg font-semibold mb-4 text-ink">Sign In</h2>
