@@ -24,7 +24,7 @@ export function LoginPage() {
     }
     setTimeout(() => {
       setLoading(false);
-      navigate('/');
+      navigate('/app');
     }, 300);
   };
 
