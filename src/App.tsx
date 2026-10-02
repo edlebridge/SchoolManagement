@@ -6,7 +6,7 @@ import { ToastProvider } from '@/context/ToastContext';
 import { ParentProvider } from '@/context/ParentContext';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { DashboardLayout, type NavItem } from '@/components/layout/DashboardLayout';
-import { LayoutDashboard, BookOpen, GraduationCap, CalendarCheck, BookCopy, ClipboardList, FileText, MessageSquare, Megaphone, CalendarDays, User, UserCog, Award, Building2, Users, CreditCard, ScrollText, Settings } from 'lucide-react';
+import { LayoutDashboard, BookOpen, GraduationCap, CalendarCheck, BookCopy, ClipboardList, FileText, MessageSquare, Megaphone, CalendarDays, User, UserCog, Award, Building2, Users, CreditCard, ScrollText, Settings, FileBarChart } from 'lucide-react';
 
 // Auth
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -25,6 +25,7 @@ import { SchoolAdminAnnouncements } from '@/pages/school-admin/SchoolAdminAnnoun
 import { SchoolAdminParents } from '@/pages/school-admin/SchoolAdminParents';
 import { SchoolAdminProfile } from '@/pages/school-admin/SchoolAdminProfile';
 import { SchoolAdminAttendanceRequests } from '@/pages/school-admin/SchoolAdminAttendanceRequests';
+import { SchoolAdminReports } from '@/pages/school-admin/SchoolAdminReports';
 
 // Teacher
 import { TeacherDashboard } from '@/pages/teacher/TeacherDashboard';
@@ -37,6 +38,7 @@ import { TeacherResults } from '@/pages/teacher/TeacherResults';
 import { TeacherMessages } from '@/pages/teacher/TeacherMessages';
 import { TeacherProfile } from '@/pages/teacher/TeacherProfile';
 import { TeacherAttendanceRequests } from '@/pages/teacher/TeacherAttendanceRequests';
+import { TeacherReports } from '@/pages/teacher/TeacherReports';
 
 // Super Admin
 import { SuperAdminDashboard } from '@/pages/super-admin/SuperAdminDashboard';
@@ -102,6 +104,7 @@ const schoolAdminNav: NavItem[] = [
   { label: 'Exam Sessions', to: '/school-admin/exam-sessions', icon: <ClipboardList className="h-5 w-5" /> },
   { label: 'Announcements', to: '/school-admin/announcements', icon: <Megaphone className="h-5 w-5" /> },
   { label: 'Requests', to: '/school-admin/attendance-requests', icon: <CalendarCheck className="h-5 w-5" /> },
+  { label: 'Reports', to: '/school-admin/reports', icon: <FileBarChart className="h-5 w-5" /> },
   { label: 'Profile', to: '/school-admin/profile', icon: <User className="h-5 w-5" /> },
 ];
 
@@ -115,6 +118,7 @@ const teacherNav: NavItem[] = [
   { label: 'Results', to: '/teacher/results', icon: <Award className="h-5 w-5" /> },
   { label: 'Messages', to: '/teacher/messages', icon: <MessageSquare className="h-5 w-5" /> },
   { label: 'Requests', to: '/teacher/attendance-requests', icon: <CalendarCheck className="h-5 w-5" /> },
+  { label: 'Reports', to: '/teacher/reports', icon: <FileBarChart className="h-5 w-5" /> },
   { label: 'Profile', to: '/teacher/profile', icon: <User className="h-5 w-5" /> },
 ];
 
@@ -163,6 +167,7 @@ export default function App() {
                   <Route path="exam-sessions" element={<SchoolAdminExamSessions />} />
                   <Route path="announcements" element={<SchoolAdminAnnouncements />} />
                   <Route path="attendance-requests" element={<SchoolAdminAttendanceRequests />} />
+                  <Route path="reports" element={<SchoolAdminReports />} />
                   <Route path="profile" element={<SchoolAdminProfile />} />
                 </Route>
 
@@ -176,6 +181,7 @@ export default function App() {
                   <Route path="results" element={<TeacherResults />} />
                   <Route path="messages" element={<TeacherMessages />} />
                   <Route path="attendance-requests" element={<TeacherAttendanceRequests />} />
+                  <Route path="reports" element={<TeacherReports />} />
                   <Route path="profile" element={<TeacherProfile />} />
                 </Route>
 

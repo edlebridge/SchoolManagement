@@ -266,3 +266,71 @@ export interface AppNotification {
   read_at: string | null;
   created_at: string;
 }
+
+export type ReportStatus = 'draft' | 'submitted' | 'under_review' | 'changes_requested' | 'resubmitted' | 'approved' | 'published';
+export type OverallAssessment = 'excellent' | 'very_good' | 'good' | 'satisfactory' | 'needs_improvement';
+
+export interface AttendanceSummary {
+  percentage: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+}
+
+export interface AcademicResultEntry {
+  subject: string;
+  score: string;
+  grade: string;
+}
+
+export interface StudentReport {
+  id: string;
+  school_id: string;
+  student_id: string;
+  teacher_id: string;
+  class_id: string | null;
+  academic_year_id: string | null;
+  term_id: string | null;
+  academic_progress: string;
+  strengths: string;
+  areas_for_improvement: string;
+  behaviour: string;
+  attendance_summary: AttendanceSummary | null;
+  academic_results: AcademicResultEntry[];
+  teacher_comment: string;
+  recommendations: string;
+  overall_assessment: string;
+  status: ReportStatus;
+  admin_feedback: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SchoolReportType = 'term' | 'annual' | 'academic_performance' | 'attendance_overview' | 'school_improvement';
+
+export interface SchoolReport {
+  id: string;
+  school_id: string;
+  academic_year_id: string | null;
+  term_id: string | null;
+  report_type: SchoolReportType;
+  title: string;
+  school_overview: string;
+  academic_commentary: string;
+  attendance_commentary: string;
+  achievements: string;
+  challenges: string;
+  improvements: string;
+  next_steps: string;
+  principal_message: string;
+  analytics_snapshot: Record<string, unknown>;
+  status: 'draft' | 'published';
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+}
