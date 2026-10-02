@@ -220,7 +220,7 @@ export function SchoolAdminReports() {
   };
 
   // School report analytics computation
-  const computeAnalytics = async (): Promise<{ overallAvg: number; subjectPerformance: Record<string, number>; classPerformance: Record<string, number>; schoolAttendance: number; passRate: number; totalStudents: number; totalMarks: number }> => {
+  const computeAnalytics = async (): Promise<{ overallAvg?: number; subjectPerformance?: Record<string, number>; classPerformance?: Record<string, number>; schoolAttendance?: number; passRate?: number; totalStudents?: number; totalMarks?: number }> => {
     if (!schoolId) return {};
     const [{ data: marks }, { data: att }] = await Promise.all([
       supabase.from('exam_marks').select('*').eq('school_id', schoolId),
