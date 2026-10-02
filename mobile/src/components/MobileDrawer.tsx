@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
-import { Bell, Menu, X } from 'lucide-react-native';
+import { Bell, LogOut, Menu, X } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -27,6 +27,7 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
   const pathname = usePathname();
   const { colors } = useTheme();
   const { top } = useSafeAreaInsets();
+  const { signOut } = useAuth();
 
   const active = useMemo(() => {
     return items.find((item) => {
@@ -37,6 +38,13 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
   }, [items, pathname]);
 
   const navigate = (href: string) => { setVisible(false); router.push(href as never); };
+
+  const handleLogout = () => {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: async () => { setVisible(false); await signOut(); router.replace('/login'); } },
+    ]);
+  };
 
   return (
     <DrawerContext.Provider value={{ open: () => setVisible(true) }}>
@@ -59,12 +67,18 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
                 const isActive = active === href;
                 return (
                   <Pressable key={href} onPress={() => navigate(href)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderRadius: 12, marginBottom: 4, backgroundColor: isActive ? colors.primarySoft : 'transparent' }}>
-                    <Icon color={isActive ? colors.primary : colors.muted} size={20} />
+                    <Icon color={colors.primary} size={20} />
                     <Text style={{ marginLeft: 14, color: isActive ? colors.primary : colors.ink, fontWeight: isActive ? '700' : '500', fontSize: 15 }}>{label}</Text>
                   </Pressable>
                 );
               })}
             </ScrollView>
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 4 }}>
+              <Pressable onPress={handleLogout} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderRadius: 12 }}>
+                <LogOut color={colors.error} size={20} />
+                <Text style={{ marginLeft: 14, color: colors.error, fontWeight: '700', fontSize: 15 }}>Sign Out</Text>
+              </Pressable>
+            </View>
           </Pressable>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} />
         </Pressable>

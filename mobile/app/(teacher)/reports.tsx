@@ -40,7 +40,7 @@ export default function TeacherReports() {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ studentId: '', academicYearId: '', termId: '', progress: '', strengths: '', comment: '' });
+  const [form, setForm] = useState({ classId: '', studentId: '', academicYearId: '', termId: '', progress: '', strengths: '', comment: '' });
 
   useEffect(() => {
     if (!profile?.id || !profile?.school_id) { setLoading(false); return; }
@@ -74,11 +74,12 @@ export default function TeacherReports() {
   const openCreate = () => {
     const activeYear = Object.values(years).find((y) => y.is_active);
     const activeTerm = Object.values(terms).find((t) => t.academic_year_id === activeYear?.id && t.is_active);
-    setForm({ studentId: '', academicYearId: activeYear?.id ?? '', termId: activeTerm?.id ?? '', progress: '', strengths: '', comment: '' });
+    setForm({ classId: '', studentId: '', academicYearId: activeYear?.id ?? '', termId: activeTerm?.id ?? '', progress: '', strengths: '', comment: '' });
     setCreateOpen(true);
   };
 
   const saveDraft = async () => {
+    if (!form.classId) { Alert.alert('Validation', 'Please select a class.'); return; }
     if (!form.studentId) { Alert.alert('Validation', 'Please select a student.'); return; }
     if (!form.academicYearId) { Alert.alert('Validation', 'Please select an academic year.'); return; }
     if (!profile?.id || !profile?.school_id) { Alert.alert('Error', 'Missing profile information.'); return; }
@@ -213,7 +214,10 @@ export default function TeacherReports() {
     );
   }
 
-  const studentOptions = Object.values(students).filter((s) => s.enrollment_status === 'active').map((s) => ({ label: s.full_name, value: s.id }));
+  const classOptions = Object.values(classes).map((c) => ({ label: c.name, value: c.id }));
+  const studentOptions = Object.values(students)
+    .filter((s) => s.enrollment_status === 'active' && (!form.classId || s.class_id === form.classId))
+    .map((s) => ({ label: s.full_name, value: s.id }));
   const yearOptions = Object.values(years).map((y) => ({ label: y.name, value: y.id }));
   const termOptions = form.academicYearId ? Object.values(terms).filter((t) => t.academic_year_id === form.academicYearId).map((t) => ({ label: t.name, value: t.id })) : [];
 
@@ -257,6 +261,7 @@ export default function TeacherReports() {
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.ink, marginLeft: 16 }}>New Student Report</Text>
           </View>
           <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <Select label="Class" value={form.classId} options={classOptions} onSelect={(v) => setForm({ ...form, classId: v, studentId: '' })} />
             <Select label="Student" value={form.studentId} options={studentOptions} onSelect={(v) => setForm({ ...form, studentId: v })} />
             <Select label="Academic Year" value={form.academicYearId} options={yearOptions} onSelect={(v) => setForm({ ...form, academicYearId: v, termId: '' })} />
             <Select label="Term" value={form.termId} options={termOptions} onSelect={(v) => setForm({ ...form, termId: v })} />

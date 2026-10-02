@@ -358,12 +358,12 @@ export function SchoolAdminReports() {
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Total Reports" value={stats.total} icon={<FileText className="h-5 w-5 text-primary" />} />
-            <StatCard label="Draft" value={stats.draft} icon={<Pencil className="h-5 w-5 text-amber-500" />} accent="bg-amber-50 dark:bg-amber-500/15" />
-            <StatCard label="Awaiting Review" value={stats.awaiting} icon={<AlertCircle className="h-5 w-5 text-orange-500" />} accent="bg-orange-50 dark:bg-orange-500/15" />
-            <StatCard label="Changes Requested" value={stats.changes} icon={<AlertCircle className="h-5 w-5 text-red-500" />} accent="bg-red-50 dark:bg-red-500/15" />
-            <StatCard label="Approved" value={stats.approved} icon={<CheckCircle className="h-5 w-5 text-green-500" />} accent="bg-green-50 dark:bg-green-500/15" />
-            <StatCard label="Published" value={stats.published} icon={<CheckCircle className="h-5 w-5 text-primary" />} />
+            <StatCard label="Total Reports" value={stats.total} icon={<FileText className="h-5 w-5 text-[#1e3a5f]" />} />
+            <StatCard label="Draft" value={stats.draft} icon={<Pencil className="h-5 w-5 text-[#1e3a5f]" />} accent="bg-amber-50 dark:bg-amber-500/15" />
+            <StatCard label="Awaiting Review" value={stats.awaiting} icon={<AlertCircle className="h-5 w-5 text-[#1e3a5f]" />} accent="bg-orange-50 dark:bg-orange-500/15" />
+            <StatCard label="Changes Requested" value={stats.changes} icon={<AlertCircle className="h-5 w-5 text-[#1e3a5f]" />} accent="bg-red-50 dark:bg-red-500/15" />
+            <StatCard label="Approved" value={stats.approved} icon={<CheckCircle className="h-5 w-5 text-[#1e3a5f]" />} accent="bg-green-50 dark:bg-green-500/15" />
+            <StatCard label="Published" value={stats.published} icon={<CheckCircle className="h-5 w-5 text-[#1e3a5f]" />} />
           </div>
 
           {/* Report completion */}
