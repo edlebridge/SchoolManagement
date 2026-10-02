@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Pressable, FlatList, Text, View, RefreshControl } from 'react-native';
+import { Pressable, FlatList, Text, View, RefreshControl, Modal, ScrollView, Alert } from 'react-native';
 import { Megaphone, ChevronRight } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
-import type { AppUser, ClassRow } from '@/lib/types';
-import { Card, Empty, Loading } from '@/components/ui';
+import type { ClassRow } from '@/lib/types';
+import { Card, Empty, Loading, Button, Field, Select } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -35,6 +35,9 @@ export default function TeacherNoticeboard() {
   const [page, setPage] = useState(0);
   const [authorMap, setAuthorMap] = useState<Record<string, string>>({});
   const [classMap, setClassMap] = useState<Record<string, string>>({});
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ title: '', body: '', audience: 'school', classId: '' });
 
   const buildQuery = (offset: number) => {
     if (!profile?.school_id) return null;
@@ -124,6 +127,34 @@ export default function TeacherNoticeboard() {
     setItems((prev) => prev.map((it) => it.id === item.id ? { ...it, read: true } : it));
   };
 
+  const publishNotice = async () => {
+    if (!form.title.trim()) { Alert.alert('Validation', 'Please enter a title.'); return; }
+    if (!form.body.trim()) { Alert.alert('Validation', 'Please enter a message.'); return; }
+    if (!profile?.school_id || !profile?.user_id) { Alert.alert('Error', 'Missing profile information.'); return; }
+    if (form.audience === 'class_all' && !form.classId) { Alert.alert('Validation', 'Please select a class.'); return; }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload: Record<string, any> = {
+        school_id: profile.school_id,
+        author_id: profile.user_id,
+        title: form.title.trim(),
+        body: form.body.trim(),
+        audience: form.audience,
+        class_id: form.audience === 'class_all' ? form.classId : null,
+      };
+      const { error } = await supabase.from('announcements').insert(payload);
+      if (error) throw error;
+      setCreateOpen(false);
+      setForm({ title: '', body: '', audience: 'school', classId: '' });
+      await loadInitial();
+    } catch (err: any) {
+      Alert.alert('Publish Failed', err?.message ?? 'Could not publish notice. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const formatAudience = (audience: string, className: string | null) => {
     switch (audience) {
       case 'school': return 'All School';
@@ -185,6 +216,22 @@ export default function TeacherNoticeboard() {
           <Text style={styles.eyebrow}>School messages</Text>
           <Text style={styles.title}>Noticeboard</Text>
           <Text style={styles.subtitle}>Latest notices and announcements</Text>
+          <Button label="New Notice" onPress={() => setCreateOpen(true)} />
+          <Modal visible={createOpen} animationType="slide" onRequestClose={() => setCreateOpen(false)}>
+            <View style={{ flex: 1, backgroundColor: colors.bg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Pressable onPress={() => setCreateOpen(false)}><Text style={{ color: colors.primary, fontWeight: '700', fontSize: 16 }}>‹ Cancel</Text></Pressable>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.ink, marginLeft: 16 }}>New Notice</Text>
+              </View>
+              <ScrollView contentContainerStyle={{ padding: 20 }}>
+                <Field label="Title" value={form.title} onChangeText={(v) => setForm({ ...form, title: v })} placeholder="Notice title" />
+                <Field label="Message" value={form.body} onChangeText={(v) => setForm({ ...form, body: v })} placeholder="Write the notice" multiline numberOfLines={6} />
+                <Select label="Audience" value={form.audience} options={[{ label: 'All school', value: 'school' }, { label: 'All teachers', value: 'teachers' }, { label: 'Specific class', value: 'class_all' }]} onSelect={(v) => setForm({ ...form, audience: v, classId: v === 'class_all' ? form.classId : '' })} />
+                {form.audience === 'class_all' && <Select label="Class" value={form.classId} options={Object.entries(classMap).map(([value, label]) => ({ value, label }))} onSelect={(v) => setForm({ ...form, classId: v })} />}
+                <Button label="Publish Notice" onPress={publishNotice} loading={saving} />
+              </ScrollView>
+            </View>
+          </Modal>
         </View>
       }
       ListEmptyComponent={<Card><Empty title="No notices" body="School announcements will appear here." /></Card>}

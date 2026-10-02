@@ -77,7 +77,7 @@ export default function TeacherMarks() {
   }, [refresh, examId]);
 
   const save = async () => {
-    if (!selectedExam || !profile?.id || !profile.school_id || !examId) {
+    if (!selectedExam || !profile?.user_id || !profile.school_id || !examId) {
       Alert.alert('Error', 'Please select an exam before saving.');
       return;
     }
@@ -98,7 +98,7 @@ export default function TeacherMarks() {
           total_marks: selectedExam.total_marks,
           grade: val != null ? gradeFromPercentage(pct) : 'F',
           teacher_comment: null,
-          entered_by: profile.id,
+          entered_by: profile.user_id,
         };
       });
 

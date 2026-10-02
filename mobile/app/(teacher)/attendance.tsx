@@ -71,7 +71,7 @@ export default function TeacherAttendance() {
   }, [refresh, selected, date, session]);
 
   const save = async () => {
-    if (!profile?.school_id || !profile.id || !selected) {
+    if (!profile?.school_id || !profile.user_id || !selected) {
       Alert.alert('Error', 'Please select a class before saving.');
       return;
     }
@@ -86,7 +86,7 @@ export default function TeacherAttendance() {
         session,
         status: statuses[s.id] ?? 'present',
         notes: null,
-        marked_by: profile.id,
+        marked_by: profile.user_id,
       }));
 
       const { error } = await supabase

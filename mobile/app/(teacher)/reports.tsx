@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { FileText, Eye, Send, AlertCircle, CheckCircle } from 'lucide-react-native';
+import { Pressable, ScrollView, Text, View, Modal, Alert } from 'react-native';
+import { FileText, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { StudentReport, Student, ClassRow, Term, AcademicYear } from '@/lib/types';
-import { Card, Empty, Loading, Badge } from '@/components/ui';
+import { Card, Empty, Loading, Badge, Button, Field, Select } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -38,6 +38,9 @@ export default function TeacherReports() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<StudentReport | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ studentId: '', academicYearId: '', termId: '', progress: '', strengths: '', comment: '' });
 
   useEffect(() => {
     if (!profile?.id || !profile?.school_id) { setLoading(false); return; }
@@ -67,6 +70,53 @@ export default function TeacherReports() {
   }, [profile?.id, profile?.school_id]);
 
   const canEdit = (status: string) => status === 'draft' || status === 'changes_requested';
+
+  const openCreate = () => {
+    const activeYear = Object.values(years).find((y) => y.is_active);
+    const activeTerm = Object.values(terms).find((t) => t.academic_year_id === activeYear?.id && t.is_active);
+    setForm({ studentId: '', academicYearId: activeYear?.id ?? '', termId: activeTerm?.id ?? '', progress: '', strengths: '', comment: '' });
+    setCreateOpen(true);
+  };
+
+  const saveDraft = async () => {
+    if (!form.studentId) { Alert.alert('Validation', 'Please select a student.'); return; }
+    if (!form.academicYearId) { Alert.alert('Validation', 'Please select an academic year.'); return; }
+    if (!profile?.id || !profile?.school_id) { Alert.alert('Error', 'Missing profile information.'); return; }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const stu = students[form.studentId];
+      const payload = {
+        school_id: profile.school_id,
+        student_id: form.studentId,
+        teacher_id: profile.id,
+        class_id: stu?.class_id ?? null,
+        academic_year_id: form.academicYearId || null,
+        term_id: form.termId || null,
+        academic_progress: form.progress.trim() || null,
+        strengths: form.strengths.trim() || null,
+        areas_for_improvement: null,
+        behaviour: null,
+        teacher_comment: form.comment.trim() || null,
+        recommendations: null,
+        overall_assessment: 'good',
+        status: 'draft',
+        admin_feedback: null,
+        approved_by: null,
+        approved_at: null,
+        published_at: null,
+      };
+      const { error } = await supabase.from('student_reports').insert(payload).select().single();
+      if (error) throw error;
+      setCreateOpen(false);
+      const { data: rpts } = await supabase.from('student_reports').select('*').eq('teacher_id', profile.id).order('updated_at', { ascending: false });
+      setReports((rpts as StudentReport[]) ?? []);
+    } catch (err: any) {
+      Alert.alert('Save Failed', err?.message ?? 'Could not save report. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleResubmit = async (report: StudentReport) => {
     setSubmitting(report.id);
@@ -163,11 +213,16 @@ export default function TeacherReports() {
     );
   }
 
+  const studentOptions = Object.values(students).filter((s) => s.enrollment_status === 'active').map((s) => ({ label: s.full_name, value: s.id }));
+  const yearOptions = Object.values(years).map((y) => ({ label: y.name, value: y.id }));
+  const termOptions = form.academicYearId ? Object.values(terms).filter((t) => t.academic_year_id === form.academicYearId).map((t) => ({ label: t.name, value: t.id })) : [];
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.eyebrow}>Reports</Text>
       <Text style={styles.title}>Student Reports</Text>
       <Text style={styles.subtitle}>View and manage your student reports</Text>
+      <Button label="New Student Report" onPress={openCreate} />
 
       {!reports.length ? (
         <Card><Empty title="No reports" body="Your student reports will appear here." /></Card>
@@ -194,6 +249,24 @@ export default function TeacherReports() {
           })}
         </View>
       )}
+
+      <Modal visible={createOpen} animationType="slide" onRequestClose={() => setCreateOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: colors.bg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Pressable onPress={() => setCreateOpen(false)}><Text style={{ color: colors.primary, fontWeight: '700', fontSize: 16 }}>‹ Cancel</Text></Pressable>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.ink, marginLeft: 16 }}>New Student Report</Text>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 20 }}>
+            <Select label="Student" value={form.studentId} options={studentOptions} onSelect={(v) => setForm({ ...form, studentId: v })} />
+            <Select label="Academic Year" value={form.academicYearId} options={yearOptions} onSelect={(v) => setForm({ ...form, academicYearId: v, termId: '' })} />
+            <Select label="Term" value={form.termId} options={termOptions} onSelect={(v) => setForm({ ...form, termId: v })} />
+            <Field label="Academic Progress" value={form.progress} onChangeText={(v) => setForm({ ...form, progress: v })} placeholder="Describe academic progress" multiline numberOfLines={4} />
+            <Field label="Strengths" value={form.strengths} onChangeText={(v) => setForm({ ...form, strengths: v })} placeholder="Describe strengths" multiline numberOfLines={4} />
+            <Field label="Teacher Comment" value={form.comment} onChangeText={(v) => setForm({ ...form, comment: v })} placeholder="Add an overall comment" multiline numberOfLines={4} />
+            <Button label="Save Draft" onPress={saveDraft} loading={saving} />
+          </ScrollView>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

@@ -28,12 +28,12 @@ export default function TeacherHomework() {
   }, [classes, classSubjects, profile?.id]);
 
   const load = useCallback(async () => {
-    if (!profile?.id) return;
+    if (!profile?.user_id) return;
     setFetching(true);
-    const { data } = await supabase.from('homework').select('*').eq('teacher_id', profile.id).order('created_at', { ascending: false });
+    const { data } = await supabase.from('homework').select('*').eq('teacher_id', profile.user_id).order('created_at', { ascending: false });
     setItems((data as HW[]) ?? []);
     setFetching(false);
-  }, [profile?.id]);
+  }, [profile?.user_id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -63,14 +63,14 @@ export default function TeacherHomework() {
     if (!form.title.trim()) { Alert.alert('Validation', 'Please enter a homework title.'); return; }
     if (!form.class_id) { Alert.alert('Validation', 'Please select a class.'); return; }
     if (!form.due_date) { Alert.alert('Validation', 'Please enter a due date.'); return; }
-    if (!profile?.id || !profile.school_id) { Alert.alert('Error', 'Missing profile information.'); return; }
+    if (!profile?.user_id || !profile.school_id) { Alert.alert('Error', 'Missing profile information.'); return; }
     if (saving) return;
 
     setSaving(true);
     try {
       const payload = {
         school_id: profile.school_id,
-        teacher_id: profile.id,
+        teacher_id: profile.user_id,
         title: form.title.trim(),
         description: form.description.trim() || null,
         class_id: form.class_id,
