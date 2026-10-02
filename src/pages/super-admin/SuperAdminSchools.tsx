@@ -11,8 +11,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Form';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Building2, Search, Ban, CircleCheck as CheckCircle2, Eye, Phone, Mail, MapPin, Users, GraduationCap, UserCog, Plus, Send, Check, Pencil, Trash2, MessageSquare, RefreshCw } from 'lucide-react';
-import { formatDate, cn, getAppOrigin } from '@/lib/utils';
+import { Building2, Search, Ban, CircleCheck as CheckCircle2, Eye, Phone, Mail, MapPin, Users, GraduationCap, UserCog, Plus, Send, Check, Pencil, Trash2, MessageSquare, RefreshCw, Upload } from 'lucide-react';
+import { formatDate, cn, getAppOrigin, uploadFile } from '@/lib/utils';
 import type { School } from '@/types';
 
 interface SchoolWithCounts extends School {
@@ -88,6 +88,8 @@ export function SuperAdminSchools() {
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', address: '', principal_name: '', admin_name: '', admin_email: '', admin_phone: '', status: 'pending' });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
+  const [editLogoPreview, setEditLogoPreview] = useState<string | null>(null);
 
   // Delete modal
   const [deleteTarget, setDeleteTarget] = useState<SchoolWithCounts | null>(null);
@@ -383,6 +385,15 @@ export function SuperAdminSchools() {
       status: s.status,
     });
     setEditErrors({});
+    setEditLogoFile(null);
+    setEditLogoPreview(s.logo_url ?? null);
+  };
+
+  const onEditLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditLogoFile(file);
+    setEditLogoPreview(URL.createObjectURL(file));
   };
 
   const saveEdit = async () => {
@@ -394,6 +405,15 @@ export function SuperAdminSchools() {
     if (Object.keys(errs).length > 0) return;
 
     setSavingEdit(true);
+
+    let logoUrl = editSchool.logo_url;
+    if (editLogoFile) {
+      const ext = editLogoFile.name.split('.').pop();
+      const path = `${editSchool.id}/logo-${Date.now()}.${ext}`;
+      const uploaded = await uploadFile('school-logos', path, editLogoFile);
+      if (uploaded) logoUrl = uploaded;
+    }
+
     const { error } = await supabase.from('schools').update({
       name: editForm.name.trim(),
       email: editForm.email.trim(),
@@ -404,6 +424,7 @@ export function SuperAdminSchools() {
       admin_email: editForm.admin_email.trim() || null,
       admin_phone: editForm.admin_phone.trim() || null,
       status: editForm.status,
+      logo_url: logoUrl,
       updated_at: new Date().toISOString(),
     }).eq('id', editSchool.id);
 
@@ -411,8 +432,10 @@ export function SuperAdminSchools() {
       toast(`Failed to update school: ${error.message}`, 'error');
     } else {
       toast('School updated successfully', 'success');
-      setSchools((prev) => prev.map((s) => s.id === editSchool.id ? { ...s, ...editForm } : s));
+      setSchools((prev) => prev.map((s) => s.id === editSchool.id ? { ...s, ...editForm, logo_url: logoUrl } : s));
       setEditSchool(null);
+      setEditLogoFile(null);
+      setEditLogoPreview(null);
       await writeAuditLog('school.updated', editSchool.id, 'schools', { school_name: editForm.name });
     }
     setSavingEdit(false);
@@ -838,6 +861,28 @@ export function SuperAdminSchools() {
       >
         {editSchool && (
           <div className="space-y-4">
+            {/* School Logo Upload */}
+            <div className="rounded-xl border border-surface-border p-4">
+              <p className="text-sm font-medium text-ink mb-3">School Logo</p>
+              <div className="flex items-center gap-4">
+                {editLogoPreview ? (
+                  <img src={editLogoPreview} alt="School logo" className="h-16 w-16 rounded-xl object-contain border border-surface-border" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-xl font-bold text-white">
+                    {editForm.name.charAt(0).toUpperCase() || 'S'}
+                  </div>
+                )}
+                <div>
+                  <label className={cn('btn btn-secondary cursor-pointer', savingEdit && 'opacity-50 pointer-events-none')}>
+                    <Upload className="h-4 w-4" />
+                    <span>Upload Logo</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={onEditLogoChange} disabled={savingEdit} />
+                  </label>
+                  <p className="text-xs text-ink-muted mt-1">JPG, PNG up to 5MB</p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="School Name *" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} error={editErrors.name} />
               <Input label="School Email *" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} error={editErrors.email} />

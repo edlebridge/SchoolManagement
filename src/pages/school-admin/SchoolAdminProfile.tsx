@@ -87,7 +87,7 @@ export function SchoolAdminProfile() {
     if (!avatarFile || !profile) return profile?.avatar_url ?? null;
     const ext = avatarFile.name.split('.').pop();
     const path = `${profile.school_id}/avatars/${profile.id}-${Date.now()}.${ext}`;
-    const url = await uploadFile('teacher-photos', path, avatarFile);
+    const url = await uploadFile('avatars', path, avatarFile);
     return url ?? profile.avatar_url;
   };
 

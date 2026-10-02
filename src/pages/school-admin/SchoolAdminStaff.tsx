@@ -199,7 +199,7 @@ export function SchoolAdminStaff() {
     if (avatarFile) {
       const ext = avatarFile.name.split('.').pop();
       const path = `${schoolId}/avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const url = await uploadFile('teacher-photos', path, avatarFile);
+      const url = await uploadFile('avatars', path, avatarFile);
       if (url) avatarUrl = url;
     }
 
