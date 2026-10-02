@@ -22,7 +22,16 @@ import {
 } from 'lucide-react';
 import './landing.css';
 
-const webScreen = '/image copy copy.png';
+const webScreens = {
+  hero: '/image copy 2.png',
+  platform: '/image copy 4.png',
+};
+
+const mobileScreens = {
+  attendance: '/mobile/assets/image.png',
+  welcome: '/image copy 3.png',
+  dashboard: '/image copy 5.png',
+};
 
 const featureItems = [
   { icon: GraduationCap, title: 'Student Management', text: 'Keep student profiles, admission details, classes, and parent connections organized in one place.' },
@@ -73,31 +82,26 @@ function scrollToSection(id: string) {
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
     <a className={`landing-brand${compact ? ' landing-brand-compact' : ''}`} href="#home" aria-label="EdLe Bridge home">
-      <span className="landing-brand-mark">E</span>
-      <span className="landing-brand-copy"><strong>EdLe<span>Bridge</span></strong><small>School platform</small></span>
+      <img src={compact ? '/image copy 6.png' : '/image copy 7.png'} alt="EdLe Bridge" />
     </a>
   );
 }
 
-function ProductDashboardVisual() {
+function ProductDashboardVisual({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="product-visual" aria-label="Preview of the EdLe Bridge web platform">
       <div className="browser-bar"><span /><span /><span /><div className="browser-address">EdLe Bridge web platform</div></div>
-      <div className="real-screen-frame"><img src={webScreen} alt="EdLe Bridge student management screen" /></div>
+      <div className="real-screen-frame"><img src={src} alt={alt} /></div>
     </div>
   );
 }
 
-function MobilePreview() {
+function MobilePreview({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="phone-stage" aria-label="Replaceable preview of the EdLe Bridge mobile app">
+    <div className="phone-stage" aria-label={alt}>
       <div className="phone-backdrop" />
-      <div className="phone">
-        <div className="phone-notch" />
-        <div className="phone-top"><span>9:41</span><span>•••</span></div>
-        <div className="phone-content"><small>EDLE BRIDGE</small><h3>Good afternoon,<br /><strong>Parent</strong></h3><p>Here is your child’s school overview.</p><div className="child-card"><div className="child-avatar">AM</div><div><b>Abubakar Mohamed</b><span>ADM00001 · Year 8</span></div><i>Active</i></div><div className="phone-metrics"><div><CalendarCheck /><b>94%</b><span>Attendance</span></div><div><BookOpen /><b>6</b><span>Homework</span></div></div><div className="phone-section"><b>Recent homework</b><div className="phone-item"><BookOpen /><span>Mathematics revision<br /><small>Due tomorrow</small></span></div><div className="phone-item"><ClipboardList /><span>Mid-term preparation<br /><small>Due Friday</small></span></div></div></div><div className="phone-nav"><span>Home</span><span>Results</span><span>Messages</span><span>Profile</span></div>
-      </div>
-      <div className="preview-label"><Smartphone /> Replaceable app preview</div>
+      <div className="phone-image-frame"><img src={src} alt={alt} /></div>
+      <div className="preview-label"><Smartphone /> Real app screen</div>
     </div>
   );
 }
@@ -132,14 +136,14 @@ export function LandingPage() {
           <div className="hero-orb hero-orb-one" /><div className="hero-orb hero-orb-two" />
           <div className="landing-container hero-grid">
             <div className="hero-copy"><div className="eyebrow"><span className="eyebrow-dot" /> One connected school community</div><h1>Connect Your Entire School Community with <span>EdLe Bridge</span></h1><p>EdLe Bridge brings school management, communication, teachers, parents, and everyday school activities together in one connected platform.</p><div className="hero-actions"><a className="button" href="#demo">Get Started <ArrowRight /></a><button className="button button-outline" type="button" onClick={() => scrollToSection('experiences')}>Explore EdLe Bridge <ArrowRight /></button></div><a className="hero-login" href="/login"><Laptop /> Login to Web Platform</a><div className="hero-note"><ShieldCheck /> Built around the real workflows your school already uses</div></div>
-            <div className="hero-product"><div className="floating-note note-top"><MonitorSmartphone /><span><b>Web + Mobile</b><small>One connected platform</small></span></div><ProductDashboardVisual /><div className="floating-note note-bottom"><div className="mini-check"><Check /></div><span><b>Stay in sync</b><small>Where your community needs it</small></span></div></div>
+            <div className="hero-product"><div className="floating-note note-top"><MonitorSmartphone /><span><b>Web + Mobile</b><small>One connected platform</small></span></div><ProductDashboardVisual src={webScreens.hero} alt="EdLe Bridge web exam sessions screen" /><div className="floating-note note-bottom"><div className="mini-check"><Check /></div><span><b>Stay in sync</b><small>Where your community needs it</small></span></div></div>
           </div>
           <div className="hero-scroll-hint"><span /> Scroll to explore</div>
         </section>
 
         <section className="trust-strip"><div className="landing-container trust-inner"><span>Built for the rhythm of school life</span><div><School /> School administration</div><div><Users /> Teachers & families</div><div><MonitorSmartphone /> Web and mobile access</div></div></section>
 
-        <section className="section section-light" id="experiences"><div className="landing-container"><div className="section-heading center"><div className="eyebrow">Choose the experience that fits your day</div><h2>EdLe Bridge Works Where Your School Community Needs It</h2><p>One platform, with focused experiences for the people who keep a school moving.</p></div><div className="experience-grid"><article className="experience-card web-card"><div className="card-kicker"><Laptop /> Web platform</div><h3>EdLe Bridge Web Platform</h3><p>Access EdLe Bridge from a laptop, desktop, or web browser.</p><div className="designed-for"><span>Designed for</span><b>School Admins</b><b>Teachers</b></div><div className="mini-browser"><div className="mini-browser-top"><span /><span /><span /></div><img src={webScreen} alt="EdLe Bridge student management screen" /></div><a className="text-link" href="/login">Login to Web Platform <ArrowRight /></a></article><article className="experience-card mobile-card"><div className="card-kicker"><Smartphone /> Mobile app</div><h3>EdLe Bridge Mobile App</h3><p>Stay connected with EdLe Bridge from your mobile device.</p><div className="designed-for"><span>Designed for</span><b>Teachers</b><b>Parents</b></div><div className="experience-phone"><MobilePreview /></div><div className="store-row"><a href="#mobile-download" className="store-button"><span>Download on the</span><b>App Store</b></a><a href="#mobile-download" className="store-button"><span>GET IT ON</span><b>Google Play</b></a></div></article></div></div></section>
+        <section className="section section-light" id="experiences"><div className="landing-container"><div className="section-heading center"><div className="eyebrow">Choose the experience that fits your day</div><h2>EdLe Bridge Works Where Your School Community Needs It</h2><p>One platform, with focused experiences for the people who keep a school moving.</p></div><div className="experience-grid"><article className="experience-card web-card"><div className="card-kicker"><Laptop /> Web platform</div><h3>EdLe Bridge Web Platform</h3><p>Access EdLe Bridge from a laptop, desktop, or web browser.</p><div className="designed-for"><span>Designed for</span><b>School Admins</b><b>Teachers</b></div><div className="mini-browser"><div className="mini-browser-top"><span /><span /><span /></div><img src={webScreens.platform} alt="EdLe Bridge school admin dashboard" /></div><a className="text-link" href="/login">Login to Web Platform <ArrowRight /></a></article><article className="experience-card mobile-card"><div className="card-kicker"><Smartphone /> Mobile app</div><h3>EdLe Bridge Mobile App</h3><p>Stay connected with EdLe Bridge from your mobile device.</p><div className="designed-for"><span>Designed for</span><b>Teachers</b><b>Parents</b></div><div className="experience-phone"><MobilePreview src={mobileScreens.welcome} alt="EdLe Bridge mobile welcome screen" /></div><div className="store-row"><a href="#mobile-download" className="store-button"><span>Download on the</span><b>App Store</b></a><a href="#mobile-download" className="store-button"><span>GET IT ON</span><b>Google Play</b></a></div></article></div></div></section>
 
         <section className="section section-tinted" id="features"><div className="landing-container"><div className="section-heading"><div className="eyebrow">A clearer way to run school life</div><h2>Everything Your School Needs, Connected in One Place</h2><p>Real workflows from the EdLe Bridge application, brought into one dependable school platform.</p></div><div className="feature-grid">{featureItems.map(({ icon: Icon, title, text }) => <article className="feature-card" key={title}><div className="icon-box"><Icon /></div><h3>{title}</h3><p>{text}</p><span className="feature-arrow"><ArrowRight /></span></article>)}</div></div></section>
 
@@ -147,9 +151,9 @@ export function LandingPage() {
 
         <section className="section section-light" id="how-it-works"><div className="landing-container"><div className="section-heading center"><div className="eyebrow">Simple to understand</div><h2>How It Works</h2><p>EdLe Bridge connects your school community in three clear steps.</p></div><div className="steps-grid"><article><div className="step-number">01</div><div><h3>Your School Connects</h3><p>The school sets up its EdLe Bridge environment.</p></div></article><article><div className="step-number">02</div><div><h3>Staff & Families Connect</h3><p>School administrators, teachers, and parents access the appropriate EdLe Bridge experience.</p></div></article><article><div className="step-number">03</div><div><h3>Manage & Stay Connected</h3><p>The school community uses EdLe Bridge to manage information, communicate, and stay connected.</p></div></article></div></div></section>
 
-        <section className="section platform-section" id="web-platform"><div className="landing-container platform-grid"><div className="platform-copy"><div className="eyebrow">The web platform</div><h2>Powerful School Management From Your Desktop</h2><p>School administrators and teachers can access EdLe Bridge from a laptop or desktop browser to manage supported school activities and day-to-day operations.</p><ul className="check-list"><li><Check /> Students, staff, classes, and subjects</li><li><Check /> Attendance, exams, marks, and results</li><li><Check /> Announcements, messages, and requests</li></ul><div className="platform-actions"><a className="button" href="/login">Login to Web Platform <ArrowRight /></a><a className="button button-outline" href="#demo">Get Started</a></div></div><div className="platform-screen"><ProductDashboardVisual /></div></div></section>
+        <section className="section platform-section" id="web-platform"><div className="landing-container platform-grid"><div className="platform-copy"><div className="eyebrow">The web platform</div><h2>Powerful School Management From Your Desktop</h2><p>School administrators and teachers can access EdLe Bridge from a laptop or desktop browser to manage supported school activities and day-to-day operations.</p><ul className="check-list"><li><Check /> Students, staff, classes, and subjects</li><li><Check /> Attendance, exams, marks, and results</li><li><Check /> Announcements, messages, and requests</li></ul><div className="platform-actions"><a className="button" href="/login">Login to Web Platform <ArrowRight /></a><a className="button button-outline" href="#demo">Get Started</a></div></div><div className="platform-screen"><ProductDashboardVisual src={webScreens.platform} alt="EdLe Bridge school admin dashboard" /></div></div></section>
 
-        <section className="section mobile-section" id="mobile-app"><div className="landing-container mobile-grid"><div className="mobile-art"><MobilePreview /></div><div className="platform-copy"><div className="eyebrow">The mobile app</div><h2>Stay Connected Wherever You Are</h2><p>Teachers and parents can use the EdLe Bridge mobile app to stay connected with the school community from their Android or iOS device.</p><ul className="check-list"><li><Check /> Teachers can stay close to classes, homework, exams, and requests</li><li><Check /> Parents can follow attendance, homework, results, and announcements</li><li><Check /> Store links are ready to add when your official app listings are live</li></ul><div className="store-row large-stores" id="mobile-download"><a href="#mobile-download" className="store-button"><Download /><span>Download on the</span><b>App Store</b></a><a href="#mobile-download" className="store-button"><Download /><span>GET IT ON</span><b>Google Play</b></a></div><small className="placeholder-note">Official app store links will be added before publishing.</small></div></div></section>
+        <section className="section mobile-section" id="mobile-app"><div className="landing-container mobile-grid"><div className="mobile-art"><MobilePreview src={mobileScreens.attendance} alt="EdLe Bridge mobile attendance screen" /><div className="mobile-screen-thumbnails"><img src={mobileScreens.dashboard} alt="EdLe Bridge mobile dashboard screen" /><img src={mobileScreens.welcome} alt="EdLe Bridge mobile welcome screen" /></div></div><div className="platform-copy"><div className="eyebrow">The mobile app</div><h2>Stay Connected Wherever You Are</h2><p>Teachers and parents can use the EdLe Bridge mobile app to stay connected with the school community from their Android or iOS device.</p><ul className="check-list"><li><Check /> Teachers can stay close to classes, homework, exams, and requests</li><li><Check /> Parents can follow attendance, homework, results, and announcements</li><li><Check /> Store links are ready to add when your official app listings are live</li></ul><div className="store-row large-stores" id="mobile-download"><a href="#mobile-download" className="store-button"><Download /><span>Download on the</span><b>App Store</b></a><a href="#mobile-download" className="store-button"><Download /><span>GET IT ON</span><b>Google Play</b></a></div><small className="placeholder-note">Official app store links will be added before publishing.</small></div></div></section>
 
         <section className="section benefits-section"><div className="landing-container"><div className="section-heading center"><div className="eyebrow">Why a connected platform?</div><h2>Designed Around Your School Community</h2></div><div className="benefit-grid"><article><Sparkles /><h3>One Connected Platform</h3><p>Bring school information and supported workflows together.</p></article><article><MessageSquare /><h3>Better Communication</h3><p>Help schools and families stay connected through supported messages and announcements.</p></article><article><Laptop /><h3>Easier School Management</h3><p>Access school management tools from the web platform.</p></article><article><Smartphone /><h3>Mobile Access</h3><p>Allow teachers and parents to stay connected through the mobile app.</p></article><article><School /><h3>Built for Schools</h3><p>Use a platform shaped around school administration and the school community.</p></article></div></div></section>
 
