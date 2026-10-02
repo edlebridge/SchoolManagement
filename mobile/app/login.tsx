@@ -33,6 +33,7 @@ export default function Login() {
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
             <Image source={require('../assets/EdLe_Bridge_Logo.png')} style={{ width: 260, height: 180, resizeMode: 'contain' }} />
             <Text style={styles.subtitle}>Your school, always within reach.</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginTop: 8 }}>Powered by EdLe Bridge</Text>
           </View>
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Welcome back</Text>

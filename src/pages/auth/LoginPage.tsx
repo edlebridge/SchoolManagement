@@ -39,6 +39,7 @@ export function LoginPage() {
         <div className="mb-8 text-center">
           <img src="/EdLe_Bridge_Logo copy 3.png" alt="EdLe Bridge" className="mx-auto mb-3 h-auto w-[360px] max-w-[88vw] object-contain" />
           <p className="mt-2 text-sm text-slate-600">School Management System</p>
+          <p className="mt-1 text-xs text-slate-400">Powered by EdLe Bridge</p>
         </div>
         <div className="card p-6">
           <h2 className="text-lg font-semibold mb-4 text-ink">Sign In</h2>

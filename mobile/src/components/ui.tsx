@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/context/ThemeContext';
 
 export function Card({ children, style }: { children: ReactNode; style?: object }) {
@@ -42,6 +43,7 @@ export function Badge({ label, color, bg }: { label: string; color: string; bg: 
 
 export function Select({ label, value, options, onSelect }: { label: string; value: string; options: { label: string; value: string }[]; onSelect: (v: string) => void }) {
   const { colors, styles } = useTheme();
+  const { top, bottom } = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
   return (
@@ -50,18 +52,23 @@ export function Select({ label, value, options, onSelect }: { label: string; val
       <Pressable onPress={() => setOpen(true)} style={[styles.input, { marginBottom: 0, justifyContent: 'center' }]}>
         <Text style={{ color: current ? colors.ink : colors.muted }}>{current?.label ?? 'Select…'}</Text>
       </Pressable>
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }} onPress={() => setOpen(false)}>
-          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '60%' }}>
-            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}><Text style={{ fontWeight: '700', fontSize: 16, color: colors.ink }}>{label}</Text></View>
-            <ScrollView>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={() => setOpen(false)}>
+          <Pressable style={{ backgroundColor: colors.surface, borderRadius: 16, width: '85%', maxWidth: 360, maxHeight: '60%', overflow: 'hidden' }} onPress={(e) => e.stopPropagation()}>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontWeight: '700', fontSize: 16, color: colors.ink }}>{label}</Text>
+              <Pressable onPress={() => setOpen(false)} style={{ padding: 4 }}>
+                <Text style={{ color: colors.muted, fontSize: 18, fontWeight: '700' }}>✕</Text>
+              </Pressable>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }} contentContainerStyle={{ paddingBottom: bottom + 8 }}>
               {options.map((o) => (
-                <Pressable key={o.value} onPress={() => { onSelect(o.value); setOpen(false); }} style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                  <Text style={{ color: o.value === value ? colors.primary : colors.ink, fontWeight: o.value === value ? '700' : '500' }}>{o.label}</Text>
+                <Pressable key={o.value} onPress={() => { onSelect(o.value); setOpen(false); }} style={{ paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <Text style={{ color: o.value === value ? colors.primary : colors.ink, fontWeight: o.value === value ? '700' : '500', fontSize: 15 }}>{o.label}</Text>
                 </Pressable>
               ))}
             </ScrollView>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>

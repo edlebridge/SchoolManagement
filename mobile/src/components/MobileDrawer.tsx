@@ -7,6 +7,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { AppNotification } from '@/lib/types';
+import { SchoolLogo, SchoolName } from '@/components/SchoolBranding';
 
 type Icon = ComponentType<{ color?: string; size?: number }>;
 export interface DrawerItem { label: string; href: string; icon: Icon; }
@@ -46,6 +47,13 @@ export function DrawerLayout({ items, children }: { items: DrawerItem[]; childre
             <Pressable onPress={() => setVisible(false)} style={{ position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 1 }}>
               <X color={colors.muted} size={22} />
             </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 4 }}>
+              <SchoolLogo size={40} borderRadius={12} />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <SchoolName fontSize={16} />
+                <Text style={{ color: colors.muted, fontSize: 11, marginTop: 2 }}>Powered by EdLe Bridge</Text>
+              </View>
+            </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
               {items.map(({ label, href, icon: Icon }) => {
                 const isActive = active === href;
@@ -106,7 +114,11 @@ export function DrawerHeader({ title }: { title: string }) {
         <Pressable onPress={open} style={{ padding: 8, marginRight: 8 }}>
           <Menu color={colors.ink} size={24} />
         </Pressable>
-        <Text style={{ color: colors.ink, fontSize: 18, fontWeight: '700', flex: 1 }}>{title}</Text>
+        <SchoolLogo size={32} />
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <SchoolName fontSize={14} />
+          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>{title}</Text>
+        </View>
         <Pressable onPress={openNotifs} style={{ padding: 8, position: 'relative' }}>
           <Bell color={colors.ink} size={22} />
           {unread > 0 && (

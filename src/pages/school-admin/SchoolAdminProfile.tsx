@@ -22,6 +22,9 @@ export function SchoolAdminProfile() {
   const [saving, setSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar_url ?? null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(school?.logo_url ?? null);
+  const [savingLogo, setSavingLogo] = useState(false);
 
   const [editForm, setEditForm] = useState({
     full_name: profile?.full_name ?? '',
@@ -43,6 +46,35 @@ export function SchoolAdminProfile() {
       if (session?.user?.email) setEmail(session.user.email);
     });
   }, []);
+
+  const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const saveLogo = async () => {
+    if (!logoFile || !school) return;
+    setSavingLogo(true);
+    const ext = logoFile.name.split('.').pop();
+    const path = `${school.id}/logo-${Date.now()}.${ext}`;
+    const url = await uploadFile('school-logos', path, logoFile);
+    if (!url) {
+      toast('Failed to upload logo', 'error');
+      setSavingLogo(false);
+      return;
+    }
+    const { error } = await supabase.from('schools').update({ logo_url: url }).eq('id', school.id);
+    setSavingLogo(false);
+    if (error) {
+      toast(error.message, 'error');
+      return;
+    }
+    toast('School logo updated successfully');
+    setLogoFile(null);
+    window.location.reload();
+  };
 
   const onAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -223,6 +255,38 @@ export function SchoolAdminProfile() {
           )}
         </Card>
       </div>
+
+      {/* School Logo Card */}
+      {school && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader title="School Branding" subtitle="Upload your school logo — it will appear throughout the portal" />
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+              <div className="flex flex-col items-center gap-2">
+                {logoPreview ? (
+                  <img src={logoPreview} alt={school.name} className="h-20 w-20 rounded-2xl object-contain border border-surface-border" />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-white">
+                    {school.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <p className="text-sm font-medium text-ink dark:text-slate-100">{school.name}</p>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <label className={cn('btn btn-secondary cursor-pointer', savingLogo && 'opacity-50 pointer-events-none')}>
+                  <Upload className="h-4 w-4" />
+                  <span>Upload Logo</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} disabled={savingLogo} />
+                </label>
+                <p className="text-xs text-ink-muted">JPG, PNG up to 5MB</p>
+                {logoFile && (
+                  <Button size="sm" loading={savingLogo} onClick={saveLogo}>Save Logo</Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Edit Profile Modal */}
       <Modal
