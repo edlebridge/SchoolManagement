@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { ScrollView, Text, View, RefreshControl } from 'react-native';
 import { Trophy } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -14,13 +14,14 @@ interface ResultRow { student: Student; marks: number; totalMarks: number; posit
 export default function TeacherResults() {
   const { profile } = useAuth();
   const { colors, styles } = useTheme();
-  const { classes, subjects, classSubjects, students, examSessions, academicYears, loading } = useSchoolData();
+  const { classes, subjects, classSubjects, students, examSessions, academicYears, loading, refresh } = useSchoolData();
   const [yearId, setYearId] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [classId, setClassId] = useState('');
   const [exams, setExams] = useState<Exam[]>([]);
   const [marks, setMarks] = useState<ExamMark[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const myClassIds = useMemo(() => {
     if (!profile?.id) return [];
@@ -71,10 +72,16 @@ export default function TeacherResults() {
     return rows;
   }, [exams, marks, classStudents]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
+
   if (loading) return <Loading />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
       <Text style={styles.eyebrow}>Examinations</Text>
       <Text style={styles.title}>Results</Text>
       <Text style={styles.subtitle}>View and analyze student performance</Text>

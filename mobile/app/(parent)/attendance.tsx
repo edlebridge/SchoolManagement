@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { ScrollView, Text, View, RefreshControl } from 'react-native';
 import { CalendarCheck } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useParentMobile } from '@/context/ParentMobileContext';
@@ -15,16 +15,23 @@ export default function ParentAttendance() {
   const { colors, styles } = useTheme();
   const [records, setRecords] = useState<Attendance[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!selectedChild || !profile?.school_id) return;
-    (async () => {
-      setFetching(true);
-      const { data } = await supabase.from('attendance').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('date', { ascending: false }).limit(60);
-      setRecords((data as Attendance[]) ?? []);
-      setFetching(false);
-    })();
+    setFetching(true);
+    const { data } = await supabase.from('attendance').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('date', { ascending: false }).limit(60);
+    setRecords((data as Attendance[]) ?? []);
+    setFetching(false);
   }, [selectedChild, profile?.school_id]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
   const present = records.filter((x) => ['present', 'late'].includes(x.status)).length;
   const pct = records.length ? Math.round(present / records.length * 100) : 0;
@@ -34,7 +41,7 @@ export default function ParentAttendance() {
   if (loading || fetching) return <Loading />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
       <Text style={styles.eyebrow}>Student wellbeing</Text>
       <Text style={styles.title}>Attendance</Text>
       <Text style={styles.subtitle}>{selectedChild?.full_name ?? 'Select a child'} · {pct}% attendance</Text>

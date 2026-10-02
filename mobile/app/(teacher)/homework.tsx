@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Modal, Pressable, ScrollView, Text, View, RefreshControl, Alert } from 'react-native';
 import { BookOpen, Plus, Trash2, Pencil, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -12,28 +12,30 @@ import { useTheme } from '@/context/ThemeContext';
 export default function TeacherHomework() {
   const { profile } = useAuth();
   const { colors, styles } = useTheme();
-  const { classes, subjects, classSubjects, loading } = useSchoolData();
+  const { classes, subjects, classSubjects, loading, refresh } = useSchoolData();
   const [items, setItems] = useState<HW[]>([]);
   const [fetching, setFetching] = useState(true);
   const [modal, setModal] = useState(false);
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState({ title: '', description: '', class_id: '', subject_id: '', due_date: '' });
   const [saving, setSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const myClassIds = useMemo(() => {
     if (!profile?.id) return [];
     return classes.filter((c) => c.class_teacher_id === profile.id || classSubjects.some((cs) => cs.class_id === c.id && cs.teacher_id === profile.id)).map((c) => c.id);
   }, [classes, classSubjects, profile?.id]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!profile?.id) return;
     setFetching(true);
     const { data } = await supabase.from('homework').select('*').eq('teacher_id', profile.id).order('created_at', { ascending: false });
     setItems((data as HW[]) ?? []);
     setFetching(false);
-  };
+  }, [profile?.id]);
 
-  useEffect(() => { load(); }, [profile?.id]);
+  useEffect(() => { load(); }, [load]);
 
   const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
   const subjectMap = useMemo(() => new Map(subjects.map((s) => [s.id, s])), [subjects]);
@@ -43,30 +45,87 @@ export default function TeacherHomework() {
     return subjects.filter((s) => classSubjects.some((cs) => cs.class_id === form.class_id && cs.subject_id === s.id && cs.teacher_id === profile.id));
   }, [form.class_id, subjects, classSubjects, profile?.id]);
 
+  const showSaved = (msg: string) => {
+    setSavedMessage(msg);
+    setTimeout(() => setSavedMessage(''), 3000);
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refresh(), load()]);
+    setRefreshing(false);
+  }, [refresh, load]);
+
   const openCreate = () => { setEditId(''); setForm({ title: '', description: '', class_id: '', subject_id: '', due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) }); setModal(true); };
   const openEdit = (h: HW) => { setEditId(h.id); setForm({ title: h.title, description: h.description ?? '', class_id: h.class_id, subject_id: h.subject_id ?? '', due_date: h.due_date?.slice(0, 10) ?? '' }); setModal(true); };
 
   const save = async () => {
-    if (!form.title.trim() || !form.class_id || !profile?.id || !profile.school_id) return;
+    if (!form.title.trim()) { Alert.alert('Validation', 'Please enter a homework title.'); return; }
+    if (!form.class_id) { Alert.alert('Validation', 'Please select a class.'); return; }
+    if (!form.due_date) { Alert.alert('Validation', 'Please enter a due date.'); return; }
+    if (!profile?.id || !profile.school_id) { Alert.alert('Error', 'Missing profile information.'); return; }
+    if (saving) return;
+
     setSaving(true);
-    const payload = { school_id: profile.school_id, teacher_id: profile.id, title: form.title.trim(), description: form.description.trim() || null, class_id: form.class_id, subject_id: form.subject_id || null, due_date: form.due_date };
-    if (editId) { await supabase.from('homework').update(payload).eq('id', editId); } else { await supabase.from('homework').insert(payload); }
-    setSaving(false); setModal(false); load();
+    try {
+      const payload = {
+        school_id: profile.school_id,
+        teacher_id: profile.id,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        class_id: form.class_id,
+        subject_id: form.subject_id || null,
+        due_date: form.due_date,
+      };
+
+      let error;
+      if (editId) {
+        ({ error } = await supabase.from('homework').update(payload).eq('id', editId));
+      } else {
+        ({ error } = await supabase.from('homework').insert(payload));
+      }
+
+      if (error) throw error;
+      showSaved(editId ? 'Homework updated' : 'Homework assigned successfully');
+      setModal(false);
+      await load();
+    } catch (err: any) {
+      Alert.alert('Save Failed', err?.message ?? 'Could not save homework. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const del = (id: string) => {
-    if (!profile) return;
-    supabase.from('homework').delete().eq('id', id).then(() => load());
+    Alert.alert('Delete Homework', 'Are you sure you want to delete this homework?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        const { error } = await supabase.from('homework').delete().eq('id', id);
+        if (error) { Alert.alert('Error', 'Could not delete homework.'); return; }
+        load();
+      } },
+    ]);
   };
 
   if (loading || fetching) return <Loading />;
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+      >
         <Text style={styles.eyebrow}>Teaching workspace</Text>
         <Text style={styles.title}>Homework</Text>
         <Text style={styles.subtitle}>{items.length} assignments</Text>
+
+        {savedMessage ? (
+          <View style={{ backgroundColor: colors.successSoft, borderRadius: 12, padding: 12, marginTop: 12 }}>
+            <Text style={{ color: colors.success, fontWeight: '700' }}>{savedMessage}</Text>
+          </View>
+        ) : null}
+
         <Pressable onPress={openCreate} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 13, marginTop: 16, marginBottom: 8 }}>
           <Plus color="#fff" size={20} /><Text style={{ color: '#fff', fontWeight: '700', marginLeft: 6 }}>Assign Homework</Text>
         </Pressable>

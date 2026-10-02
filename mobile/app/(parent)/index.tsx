@@ -1,41 +1,113 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { Pressable, ScrollView, Text, View, RefreshControl } from 'react-native';
 import { CalendarCheck, BookOpen, ChartBar as BarChart3, Megaphone } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useParentMobile } from '@/context/ParentMobileContext';
 import { supabase } from '@/lib/supabase';
-import type { Attendance, Homework } from '@/lib/types';
+import type { Attendance, Homework, ExamMark, Exam, Subject, Term } from '@/lib/types';
 import { Card, Empty, Loading, StatCard, Badge } from '@/components/ui';
-import { formatDate, relativeTime } from '@/lib/format';
+import { formatDate, relativeTime, percentage, gradeFromPercentage } from '@/lib/format';
 import { useTheme } from '@/context/ThemeContext';
+
+interface OverallResult {
+  studentName: string;
+  termName: string;
+  totalObtained: number;
+  totalMax: number;
+  overallPct: number;
+  grade: string;
+  subjectCount: number;
+}
 
 function HomeContent() {
   const { profile, school } = useAuth();
   const { children, selectedChild, selectedClass, loading, selectChild } = useParentMobile();
   const { colors, styles } = useTheme();
+  const router = useRouter();
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
-  const [examMarks, setExamMarks] = useState<any[]>([]);
+  const [overallResults, setOverallResults] = useState<OverallResult[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!selectedChild || !profile?.school_id) return;
-    (async () => {
-      setFetching(true);
-      const [a, h, an, mk] = await Promise.all([
-        supabase.from('attendance').select('status').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('date', { ascending: false }).limit(100),
-        selectedChild.class_id ? supabase.from('homework').select('*').eq('school_id', profile.school_id).eq('class_id', selectedChild.class_id).order('due_date', { ascending: true }).limit(10) : Promise.resolve({ data: [] }),
-        supabase.from('announcements').select('*').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(5),
-        supabase.from('exam_marks').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('created_at', { ascending: false }).limit(10),
+    setFetching(true);
+    const [a, h, an, mk] = await Promise.all([
+      supabase.from('attendance').select('status').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('date', { ascending: false }).limit(100),
+      selectedChild.class_id ? supabase.from('homework').select('*').eq('school_id', profile.school_id).eq('class_id', selectedChild.class_id).order('due_date', { ascending: true }).limit(10) : Promise.resolve({ data: [] }),
+      supabase.from('announcements').select('*').eq('school_id', profile.school_id).order('created_at', { ascending: false }).limit(5),
+      supabase.from('exam_marks').select('*').eq('school_id', profile.school_id).eq('student_id', selectedChild.id).order('created_at', { ascending: false }),
+    ]);
+    setAttendance((a.data as Attendance[]) ?? []);
+    setHomework((h.data as Homework[]) ?? []);
+    setAnnouncements((an.data as any[]) ?? []);
+
+    const marks = (mk.data as ExamMark[]) ?? [];
+    if (marks.length > 0) {
+      const examIds = [...new Set(marks.map((m) => m.exam_id))];
+      const subjectIds = [...new Set(marks.map((m) => m.subject_id))];
+      const [{ data: examsData }, { data: subjectsData }] = await Promise.all([
+        supabase.from('exams').select('id,term_id,exam_session_id').in('id', examIds),
+        supabase.from('subjects').select('id,name').in('id', subjectIds),
       ]);
-      setAttendance((a.data as Attendance[]) ?? []);
-      setHomework((h.data as Homework[]) ?? []);
-      setAnnouncements((an.data as any[]) ?? []);
-      setExamMarks((mk.data as any[]) ?? []);
-      setFetching(false);
-    })();
+      const exams = (examsData as (Exam & { term_id?: string | null })[]) ?? [];
+      const subjects = (subjectsData as Subject[]) ?? [];
+      const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+
+      const sessionIds = [...new Set(exams.map((e) => e.exam_session_id).filter(Boolean))] as string[];
+      let sessionTermMap: Record<string, string | null> = {};
+      if (sessionIds.length > 0) {
+        const { data: sessionsData } = await supabase.from('exam_sessions').select('id,term_id').in('id', sessionIds);
+        (sessionsData as { id: string; term_id: string | null }[])?.forEach((s) => { sessionTermMap[s.id] = s.term_id; });
+      }
+      const termIds = [...new Set(Object.values(sessionTermMap).filter(Boolean))] as string[];
+      let termMap: Record<string, string> = {};
+      if (termIds.length > 0) {
+        const { data: termsData } = await supabase.from('terms').select('id,name').in('id', termIds);
+        (termsData as Term[])?.forEach((t) => { termMap[t.id] = t.name; });
+      }
+
+      const bySession: Record<string, { totalObtained: number; totalMax: number; subjects: Set<string>; termId: string | null }> = {};
+      marks.forEach((m) => {
+        const exam = exams.find((e) => e.id === m.exam_id);
+        const sessionId = exam?.exam_session_id ?? 'unknown';
+        if (!bySession[sessionId]) bySession[sessionId] = { totalObtained: 0, totalMax: 0, subjects: new Set(), termId: sessionTermMap[sessionId] ?? null };
+        bySession[sessionId].totalObtained += m.marks ?? 0;
+        bySession[sessionId].totalMax += m.total_marks;
+        bySession[sessionId].subjects.add(subjectMap.get(m.subject_id) ?? 'Unknown');
+      });
+
+      const results: OverallResult[] = Object.entries(bySession).map(([sessionId, data]) => {
+        const termName = data.termId ? (termMap[data.termId] ?? '—') : '—';
+        const pct = data.totalMax > 0 ? Math.round((data.totalObtained / data.totalMax) * 100) : 0;
+        return {
+          studentName: selectedChild.full_name,
+          termName,
+          totalObtained: data.totalObtained,
+          totalMax: data.totalMax,
+          overallPct: pct,
+          grade: gradeFromPercentage(pct),
+          subjectCount: data.subjects.size,
+        };
+      }).sort((a, b) => b.overallPct - a.overallPct);
+
+      setOverallResults(results);
+    } else {
+      setOverallResults([]);
+    }
+    setFetching(false);
   }, [selectedChild, profile?.school_id]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
   if (loading || fetching) return <Loading />;
 
@@ -45,7 +117,11 @@ function HomeContent() {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
       <Text style={styles.eyebrow}>{school?.name ?? 'EduBridge'}</Text>
       <Text style={styles.title}>{greeting}, {profile?.full_name?.split(' ')[0] ?? 'Parent'}</Text>
       <Text style={styles.subtitle}>Here is your child's school overview.</Text>
@@ -87,7 +163,7 @@ function HomeContent() {
             <StatCard icon={<BookOpen color={colors.primary} size={22} />} value={homework.length} label="Homework" color={colors.primary} />
           </View>
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-            <StatCard icon={<BarChart3 color={colors.primary} size={22} />} value={examMarks.length} label="Results" color={colors.primary} />
+            <StatCard icon={<BarChart3 color={colors.primary} size={22} />} value={overallResults.length} label="Exam Results" color={colors.primary} />
           </View>
 
           {homework.length > 0 && (
@@ -111,34 +187,42 @@ function HomeContent() {
             </>
           )}
 
-          {examMarks.length > 0 && (
+          {overallResults.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Recent Results</Text>
-              {examMarks.slice(0, 5).map((m) => (
-                <Card key={m.id}>
-                  <View style={styles.row}>
-                    <BarChart3 color={colors.primary} size={20} />
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={{ fontWeight: '700', color: colors.ink }}>{m.marks}/{m.total_marks}</Text>
-                      <Text style={{ color: colors.muted, marginTop: 3 }}>Grade: {m.grade}</Text>
+              <Pressable onPress={() => router.push('/(parent)/results')}>
+                {overallResults.slice(0, 3).map((r, i) => (
+                  <Card key={i}>
+                    <View style={styles.row}>
+                      <BarChart3 color={colors.primary} size={20} />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={{ fontWeight: '700', color: colors.ink }}>Overall Result · {r.termName}</Text>
+                        <Text style={{ color: colors.muted, marginTop: 3 }}>Total: {r.totalObtained} / {r.totalMax} · {r.subjectCount} subjects</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.primary }}>{r.overallPct}%</Text>
+                        <View style={{ marginTop: 4 }}><Badge label={r.grade} color={r.overallPct >= 50 ? colors.success : colors.error} bg={r.overallPct >= 50 ? colors.successSoft : colors.errorSoft} /></View>
+                      </View>
                     </View>
-                    <Badge label={m.grade} color={colors.primary} bg={colors.primarySoft} />
-                  </View>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </Pressable>
             </>
           )}
 
           {announcements.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Announcements</Text>
-              {announcements.map((a) => (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 4 }}>
+                <Text style={styles.sectionTitle}>Announcements</Text>
+                <Pressable onPress={() => router.push('/(parent)/noticeboard')}><Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>View All ›</Text></Pressable>
+              </View>
+              {announcements.slice(0, 3).map((a) => (
                 <Card key={a.id}>
                   <View style={styles.row}>
                     <Megaphone color={colors.muted} size={18} />
                     <Text style={{ fontWeight: '700', color: colors.ink, marginLeft: 8, flex: 1 }}>{a.title}</Text>
                   </View>
-                  {a.body ? <Text style={{ color: colors.muted, marginTop: 6, lineHeight: 20 }}>{a.body}</Text> : null}
+                  {a.body ? <Text style={{ color: colors.muted, marginTop: 6, lineHeight: 20 }} numberOfLines={2}>{a.body}</Text> : null}
                   <Text style={{ color: colors.muted, marginTop: 6, fontSize: 12 }}>{relativeTime(a.created_at)}</Text>
                 </Card>
               ))}

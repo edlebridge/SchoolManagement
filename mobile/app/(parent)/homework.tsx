@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { ScrollView, Text, View, RefreshControl } from 'react-native';
 import { BookOpen, CalendarClock } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useParentMobile } from '@/context/ParentMobileContext';
@@ -16,20 +16,27 @@ export default function ParentHomework() {
   const [items, setItems] = useState<Homework[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!selectedChild?.class_id || !profile?.school_id) return;
-    (async () => {
-      setFetching(true);
-      const [hw, sub] = await Promise.all([
-        supabase.from('homework').select('*').eq('school_id', profile.school_id).eq('class_id', selectedChild.class_id).order('due_date', { ascending: true }),
-        supabase.from('subjects').select('*').eq('school_id', profile.school_id),
-      ]);
-      setItems((hw.data as Homework[]) ?? []);
-      setSubjects((sub.data as Subject[]) ?? []);
-      setFetching(false);
-    })();
+    setFetching(true);
+    const [hw, sub] = await Promise.all([
+      supabase.from('homework').select('*').eq('school_id', profile.school_id).eq('class_id', selectedChild.class_id).order('due_date', { ascending: true }),
+      supabase.from('subjects').select('*').eq('school_id', profile.school_id),
+    ]);
+    setItems((hw.data as Homework[]) ?? []);
+    setSubjects((sub.data as Subject[]) ?? []);
+    setFetching(false);
   }, [selectedChild?.class_id, profile?.school_id]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
   const subjectMap = useMemo(() => new Map(subjects.map((s) => [s.id, s])), [subjects]);
   const overdue = useMemo(() => items.filter((x) => new Date(x.due_date) < new Date()).length, [items]);
@@ -37,7 +44,7 @@ export default function ParentHomework() {
   if (loading || fetching) return <Loading />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
       <Text style={styles.eyebrow}>{selectedChild?.full_name ?? 'Student'}</Text>
       <Text style={styles.title}>Homework</Text>
       <Text style={styles.subtitle}>{items.length} assignments · {overdue} overdue</Text>
