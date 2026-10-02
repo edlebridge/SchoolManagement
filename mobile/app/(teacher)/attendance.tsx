@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { Pressable, ScrollView, Text, View, RefreshControl, Alert } from 'react-native';
 import { CalendarCheck } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { supabase } from '@/lib/supabase';
-import type { ClassRow, Student, Attendance } from '@/lib/types';
+import type { Attendance } from '@/lib/types';
 import { Card, Empty, Loading } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -19,13 +19,16 @@ const STATUS_OPTS: { label: string; value: Status; color: string }[] = [
 export default function TeacherAttendance() {
   const { profile } = useAuth();
   const { colors, styles } = useTheme();
-  const { classes, students, classSubjects, loading } = useSchoolData();
+  const { classes, students, classSubjects, loading, refresh } = useSchoolData();
   const [selected, setSelected] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [session, setSession] = useState<'morning' | 'afternoon'>('morning');
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
   const [existing, setExisting] = useState<Record<string, string>>({});
   const [fetching, setFetching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const myClasses = classes.filter((c) => c.class_teacher_id === profile?.id || classSubjects.some((cs) => cs.class_id === c.id && cs.teacher_id === profile?.id));
   const classStudents = students.filter((s) => s.class_id === selected && s.enrollment_status === 'active');
@@ -47,19 +50,75 @@ export default function TeacherAttendance() {
     })();
   }, [selected, date, session]);
 
+  const showSaved = (msg: string) => {
+    setSavedMessage(msg);
+    setTimeout(() => setSavedMessage(''), 3000);
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    if (selected) {
+      const { data } = await supabase.from('attendance').select('*').eq('class_id', selected).eq('date', date).eq('session', session);
+      const ex: Record<string, string> = {};
+      (data as Attendance[])?.forEach((a) => { ex[a.student_id] = a.status; });
+      setExisting(ex);
+      const init: Record<string, Status> = {};
+      classStudents.forEach((s) => { init[s.id] = (ex[s.id] as Status) ?? 'present'; });
+      setStatuses(init);
+    }
+    setRefreshing(false);
+  }, [refresh, selected, date, session]);
+
   const save = async () => {
-    if (!profile?.school_id || !profile.id || !selected) return;
-    const rows = classStudents.map((s) => ({ school_id: profile.school_id, student_id: s.id, class_id: selected, date, session, status: statuses[s.id] ?? 'present', notes: null, marked_by: profile.id }));
-    await supabase.from('attendance').upsert(rows, { onConflict: 'student_id,date,session' });
+    if (!profile?.school_id || !profile.id || !selected) {
+      Alert.alert('Error', 'Please select a class before saving.');
+      return;
+    }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const rows = classStudents.map((s) => ({
+        school_id: profile.school_id,
+        student_id: s.id,
+        class_id: selected,
+        date,
+        session,
+        status: statuses[s.id] ?? 'present',
+        notes: null,
+        marked_by: profile.id,
+      }));
+
+      const { error } = await supabase
+        .from('attendance')
+        .upsert(rows, { onConflict: 'student_id,date,session' });
+
+      if (error) throw error;
+      showSaved(`${session === 'morning' ? 'Morning' : 'Afternoon'} attendance saved`);
+    } catch (err: any) {
+      Alert.alert('Save Failed', err?.message ?? 'Could not save attendance. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) return <Loading />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
       <Text style={styles.eyebrow}>Today · {new Date().toLocaleDateString()}</Text>
       <Text style={styles.title}>Attendance</Text>
-      <Text style={styles.subtitle}>Tap a status to save it for the school.</Text>
+      <Text style={styles.subtitle}>Mark attendance for morning and afternoon sessions.</Text>
+
+      {savedMessage ? (
+        <View style={{ backgroundColor: colors.successSoft, borderRadius: 12, padding: 12, marginTop: 12 }}>
+          <Text style={{ color: colors.success, fontWeight: '700' }}>{savedMessage}</Text>
+        </View>
+      ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 18, marginBottom: 8 }}>
         {myClasses.map((c) => (
@@ -96,8 +155,8 @@ export default function TeacherAttendance() {
               </View>
             </Card>
           ))}
-          <Pressable onPress={save} style={{ backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Save Attendance</Text>
+          <Pressable onPress={save} disabled={saving} style={{ backgroundColor: saving ? colors.muted : colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 8, opacity: saving ? 0.7 : 1 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{saving ? 'Saving…' : 'Save Attendance'}</Text>
           </Pressable>
         </>
       )}

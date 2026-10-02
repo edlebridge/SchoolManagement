@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CalendarCheck, Hop as Home, MessageCircle, BookOpen, User, ChartBar as BarChart3, ClipboardCheck, FileText } from 'lucide-react-native';
+import { CalendarCheck, Hop as Home, MessageCircle, BookOpen, User, ChartBar as BarChart3, ClipboardCheck, FileText, FileBarChart, Megaphone, DoorOpen } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { ParentMobileProvider } from '@/context/ParentMobileContext';
 import { DrawerHeader, DrawerLayout, type DrawerItem } from '@/components/MobileDrawer';
@@ -9,9 +9,11 @@ const items: DrawerItem[] = [
   { label: 'Dashboard', href: '/(parent)', icon: Home },
   { label: 'Attendance', href: '/(parent)/attendance', icon: CalendarCheck },
   { label: 'Homework', href: '/(parent)/homework', icon: BookOpen },
-  { label: 'Exams', href: '/(parent)/exams', icon: ClipboardCheck },
+  { label: 'Exams', href: '/(parent)/exams', icon: DoorOpen },
   { label: 'Results', href: '/(parent)/results', icon: BarChart3 },
+  { label: 'Reports', href: '/(parent)/reports', icon: FileBarChart },
   { label: 'Messages', href: '/(parent)/messages', icon: MessageCircle },
+  { label: 'Noticeboard', href: '/(parent)/noticeboard', icon: Megaphone },
   { label: 'Requests', href: '/(parent)/requests', icon: FileText },
   { label: 'Profile', href: '/(parent)/profile', icon: User },
 ];
@@ -35,8 +37,10 @@ export default function ParentLayout() {
           <Tabs.Screen name="homework" options={{ title: 'Homework', tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} /> }} />
           <Tabs.Screen name="messages" options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle color={color} size={size} /> }} />
           <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User color={color} size={size} /> }} />
-          <Tabs.Screen name="exams" options={{ title: 'Exams', tabBarIcon: ({ color, size }) => <ClipboardCheck color={color} size={size} />, href: null }} />
+          <Tabs.Screen name="exams" options={{ title: 'Exams', tabBarIcon: ({ color, size }) => <DoorOpen color={color} size={size} />, href: null }} />
           <Tabs.Screen name="results" options={{ title: 'Results', tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />, href: null }} />
+        <Tabs.Screen name="reports" options={{ title: 'Reports', tabBarIcon: ({ color, size }) => <FileBarChart color={color} size={size} />, href: null }} />
+        <Tabs.Screen name="noticeboard" options={{ title: 'Noticeboard', tabBarIcon: ({ color, size }) => <Megaphone color={color} size={size} />, href: null }} />
           <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: ({ color, size }) => <FileText color={color} size={size} />, href: null }} />
         </Tabs>
       </DrawerLayout>

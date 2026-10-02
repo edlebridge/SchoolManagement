@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Pressable, ScrollView, Share, Text, View, RefreshControl } from 'react-native';
 import { Trophy, Download } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useParentMobile } from '@/context/ParentMobileContext';
@@ -21,6 +21,7 @@ export default function ParentResults() {
   const [sessionId, setSessionId] = useState('');
   const [academicYears, setAcademicYears] = useState<{ id: string; name: string }[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!profile?.school_id || !selectedChild?.id) { setFetching(false); return; }
@@ -86,10 +87,22 @@ export default function ParentResults() {
     Share.share({ message: csv, title: `Results_${selectedChild?.full_name ?? 'student'}` }).catch(() => {});
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (selectedChild?.id && profile?.school_id) {
+      let q = supabase.from('exam_sessions').select('*').eq('school_id', profile.school_id).order('created_at', { ascending: false });
+      if (yearId) q = q.eq('academic_year_id', yearId);
+      const { data: sess } = await q;
+      setSessions((sess as ExamSession[]) ?? []);
+      setSessionId('');
+    }
+    setRefreshing(false);
+  }, [selectedChild?.id, profile?.school_id, yearId]);
+
   if (loading || fetching) return <Loading />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
       <Text style={styles.eyebrow}>{selectedChild?.full_name ?? 'Student'}</Text>
       <Text style={styles.title}>Results</Text>
       <Text style={styles.subtitle}>Exam performance and grades</Text>

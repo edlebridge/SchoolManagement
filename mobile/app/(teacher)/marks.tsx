@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View, RefreshControl, Alert } from 'react-native';
 import { Save } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -12,7 +12,7 @@ import { useTheme } from '@/context/ThemeContext';
 export default function TeacherMarks() {
   const { profile } = useAuth();
   const { colors, styles } = useTheme();
-  const { classes, subjects, classSubjects, students, academicYears, examSessions, loading } = useSchoolData();
+  const { classes, subjects, classSubjects, students, academicYears, examSessions, loading, refresh } = useSchoolData();
   const [yearId, setYearId] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [classId, setClassId] = useState('');
@@ -22,6 +22,8 @@ export default function TeacherMarks() {
   const [marks, setMarks] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [savedMessage, setSavedMessage] = useState('');
 
   const myClassIds = useMemo(() => {
     if (!profile?.id) return [];
@@ -52,31 +54,84 @@ export default function TeacherMarks() {
     if (!examId) { setMarks({}); return; }
     supabase.from('exam_marks').select('*').eq('exam_id', examId).then(({ data }) => {
       const m: Record<string, string> = {};
-      (data as ExamMark[])?.forEach((x) => { m[x.student_id] = String(x.marks); });
+      (data as ExamMark[])?.forEach((x) => { m[x.student_id] = String(x.marks ?? ''); });
       setMarks(m);
     });
   }, [examId]);
 
+  const showSaved = (msg: string) => {
+    setSavedMessage(msg);
+    setTimeout(() => setSavedMessage(''), 3000);
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    if (examId) {
+      const { data } = await supabase.from('exam_marks').select('*').eq('exam_id', examId);
+      const m: Record<string, string> = {};
+      (data as ExamMark[])?.forEach((x) => { m[x.student_id] = String(x.marks ?? ''); });
+      setMarks(m);
+    }
+    setRefreshing(false);
+  }, [refresh, examId]);
+
   const save = async () => {
-    if (!selectedExam || !profile?.id || !profile.school_id) return;
+    if (!selectedExam || !profile?.id || !profile.school_id || !examId) {
+      Alert.alert('Error', 'Please select an exam before saving.');
+      return;
+    }
+    if (saving) return;
     setSaving(true);
-    const rows = classStudents.map((s) => {
-      const raw = marks[s.id] ?? '';
-      const val = raw === '' ? null : Math.max(0, Math.min(selectedExam.total_marks, parseFloat(raw)));
-      const pct = val != null ? percentage(val, selectedExam.total_marks) : 0;
-      return { school_id: profile.school_id, exam_id: examId, student_id: s.id, subject_id: selectedExam.subject_id, class_id: classId, marks: val ?? 0, total_marks: selectedExam.total_marks, grade: val != null ? gradeFromPercentage(pct) : 'F', teacher_comment: null, entered_by: profile.id };
-    });
-    await supabase.from('exam_marks').upsert(rows, { onConflict: 'exam_id,student_id,subject_id' });
-    setSaving(false);
+    try {
+      const rows = classStudents.map((s) => {
+        const raw = marks[s.id] ?? '';
+        const val = raw === '' ? null : Math.max(0, Math.min(selectedExam.total_marks, parseFloat(raw)));
+        const pct = val != null ? percentage(val, selectedExam.total_marks) : 0;
+        return {
+          school_id: profile.school_id,
+          exam_id: examId,
+          student_id: s.id,
+          subject_id: selectedExam.subject_id,
+          class_id: classId,
+          marks: val ?? 0,
+          total_marks: selectedExam.total_marks,
+          grade: val != null ? gradeFromPercentage(pct) : 'F',
+          teacher_comment: null,
+          entered_by: profile.id,
+        };
+      });
+
+      const { error } = await supabase
+        .from('exam_marks')
+        .upsert(rows, { onConflict: 'exam_id,student_id,subject_id' });
+
+      if (error) throw error;
+      showSaved('Marks saved successfully');
+    } catch (err: any) {
+      Alert.alert('Save Failed', err?.message ?? 'Could not save marks. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) return <Loading />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+    >
       <Text style={styles.eyebrow}>Examinations</Text>
       <Text style={styles.title}>Marks</Text>
       <Text style={styles.subtitle}>Enter exam marks for your students</Text>
+
+      {savedMessage ? (
+        <View style={{ backgroundColor: colors.successSoft, borderRadius: 12, padding: 12, marginTop: 12 }}>
+          <Text style={{ color: colors.success, fontWeight: '700' }}>{savedMessage}</Text>
+        </View>
+      ) : null}
 
       {academicYears.length > 0 && (
         <View style={{ marginTop: 16 }}>
@@ -92,8 +147,8 @@ export default function TeacherMarks() {
         <View style={{ marginTop: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <Text style={styles.sectionTitle}>Students ({classStudents.length})</Text>
-            <Pressable onPress={save} disabled={saving} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
-              <Save color="#fff" size={18} /><Text style={{ color: '#fff', fontWeight: '700', marginLeft: 6 }}>{saving ? 'Saving…' : 'Save'}</Text>
+            <Pressable onPress={save} disabled={saving} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: saving ? colors.muted : colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, opacity: saving ? 0.7 : 1 }}>
+              <Save color="#fff" size={18} /><Text style={{ color: '#fff', fontWeight: '700', marginLeft: 6 }}>{saving ? 'Saving…' : 'Save Marks'}</Text>
             </Pressable>
           </View>
           {!classStudents.length ? <Card><Empty title="No students" body="No active students in this class." /></Card> : classStudents.map((s, i) => {
