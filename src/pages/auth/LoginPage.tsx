@@ -37,7 +37,7 @@ export function LoginPage() {
       </button>
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <img src="/image copy 7.png" alt="EdLe Bridge" className="mx-auto mb-3 h-auto w-[360px] max-w-[88vw] object-contain" />
+          <img src="/EdLe_Bridge_Logo copy 3.png" alt="EdLe Bridge" className="mx-auto mb-3 h-auto w-[360px] max-w-[88vw] object-contain" />
           <p className="mt-2 text-sm text-slate-600">School Management System</p>
         </div>
         <div className="card p-6">
